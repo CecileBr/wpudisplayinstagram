@@ -2,7 +2,7 @@
 /*
 Plugin Name: WPU Display Instagram
 Description: Displays the latest image for an Instagram account
-Version: 0.5
+Version: 0.5.1
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -33,7 +33,6 @@ class wpu_display_instagram
         add_action('init', array(&$this,
             'register_post_types'
         ));
-
         add_action('admin_menu', array(&$this,
             'add_menu_page'
         ));
@@ -49,7 +48,6 @@ class wpu_display_instagram
         $this->user_id = trim(get_option('wpu_get_instagram__user_id'));
         $this->redirect_uri = admin_url('admin.php?page=' . $this->options['id']);
         $this->transient_id = 'json_instagram_' . $this->user_id;
-        $this->latest_id = 'latest_id_instagram_' . $this->user_id;
     }
 
     /* ----------------------------------------------------------
@@ -145,6 +143,7 @@ class wpu_display_instagram
 
         // Save postid
         update_post_meta($post_id, 'instagram_post_id', $datas['id']);
+        update_post_meta($post_id, 'instagram_post_link', $datas['link']);
 
         // Add required classes
         require_once (ABSPATH . 'wp-admin/includes/media.php');
