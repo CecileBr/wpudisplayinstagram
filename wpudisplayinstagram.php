@@ -1,8 +1,9 @@
 <?php
+
 /*
 Plugin Name: WPU Display Instagram
 Description: Displays the latest image for an Instagram account
-Version: 0.5.1
+Version: 0.5.2
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -103,7 +104,7 @@ class wpu_display_instagram
 
         // Get cached JSON
         $json_instagram = get_transient($this->transient_id);
-        if (!empty($json_instagram)) {
+        if (empty($json_instagram)) {
             $json_instagram = file_get_contents($request_url);
             set_transient($this->transient_id, $json_instagram, HOUR_IN_SECONDS);
         }
