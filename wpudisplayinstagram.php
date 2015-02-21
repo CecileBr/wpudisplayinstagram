@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Display Instagram
 Description: Displays the latest image for an Instagram account
-Version: 0.6
+Version: 0.7
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -20,6 +20,7 @@ class wpu_display_instagram
     );
 
     function __construct() {
+        load_plugin_textdomain('wpudisplayinstagram', false, dirname(plugin_basename(__FILE__)) . '/lang/');
 
         $this->options = array(
             'id' => 'wpu-display-instagram',
@@ -93,7 +94,7 @@ class wpu_display_instagram
         foreach ($this->plugins as $id => $plugin) {
             if (!is_plugin_active($plugin['path'])) {
                 $this->plugins[$id]['installed'] = false;
-                $this->set_message($id . '__not_installed', sprintf('The plugin %s should be installed.', $plugin['message_url']) , 'error');
+                $this->set_message($id . '__not_installed', sprintf($this->__('The plugin %s should be installed.') , $plugin['message_url']) , 'error');
             }
         }
     }
@@ -123,13 +124,13 @@ class wpu_display_instagram
         $token = '';
         $response = '{}';
         if (!isset($result['body'])) {
-            $this->set_message('token_no_body', 'The response from Instagram is invalid.', 'error');
+            $this->set_message('token_no_body', $this->__('The response from Instagram is invalid.') , 'error');
             return;
         }
         $response = json_decode($result['body']);
 
         if (!isset($response->access_token)) {
-            $this->set_message('token_no_token', 'The access token from Instagram could not be retrieved.', 'error');
+            $this->set_message('token_no_token', $this->__('The access token from Instagram could not be retrieved.') , 'error');
             return;
         }
 
@@ -139,7 +140,7 @@ class wpu_display_instagram
         update_option('wpu_get_instagram__client_token', $this->client_token);
         update_option('wpu_get_instagram__user_id', $this->user_id);
 
-        $this->set_message('token_success', 'The token have been successfully imported.', 'updated');
+        $this->set_message('token_success', $this->__('The token have been successfully imported.') , 'updated');
         wp_redirect($this->redirect_uri);
         exit();
     }
@@ -164,7 +165,7 @@ class wpu_display_instagram
         $imginsta = json_decode($json_instagram);
 
         if (!is_array($imginsta->data)) {
-            $this->set_message('no_array_insta', 'The datas sent by Instagram are invalid.', 'error');
+            $this->set_message('no_array_insta', $this->__('The datas sent by Instagram are invalid.') , 'error');
             return;
         }
 
@@ -197,9 +198,10 @@ class wpu_display_instagram
             'post_type' => 'instagram_posts'
         ));
 
-        // Save postid
+        // Save datas
         update_post_meta($post_id, 'instagram_post_id', $datas['id']);
         update_post_meta($post_id, 'instagram_post_link', $datas['link']);
+        update_post_meta($post_id, 'instagram_post_datas', $datas);
 
         // Add required classes
         require_once (ABSPATH . 'wp-admin/includes/media.php');
@@ -298,7 +300,7 @@ class wpu_display_instagram
 
     function add_menu_page() {
         if ($this->plugins['wpuoptions']['installed']) {
-            add_menu_page($this->options['name'], $this->options['name'], 'manage_options', $this->options['id'], array(&$this,
+            add_management_page($this->options['name'], $this->options['name'], 'manage_options', $this->options['id'], array(&$this,
                 'admin_page'
             ) , 'dashicons-admin-generic');
         }
@@ -309,9 +311,17 @@ class wpu_display_instagram
 
             $count_import = $this->import();
             if ($count_import === false) {
-                $this->set_message('import_error', 'The import has failed.', 'updated');
+                $this->set_message('import_error', $this->__('The import has failed.') , 'updated');
             } else {
-                $this->set_message('import_success', sprintf('%s files have been imported.', $count_import) , 'updated');
+
+                $msg_import = sprintf($this->__('%s files have been imported.') , $count_import);
+                if ($count_import < 2) {
+                    $msg_import = sprintf($this->__('%s file have been imported.') , $count_import);
+                }
+                if ($count_import < 1) {
+                    $msg_import = sprintf($this->__('No file have been imported.') , $count_import);
+                }
+                $this->set_message('import_success', $msg_import, 'updated');
             }
 
             wp_redirect($this->redirect_uri);
@@ -321,19 +331,23 @@ class wpu_display_instagram
 
     function admin_page() {
         $_plugin_ok = true;
+        $admin_link = admin_url('admin.php?page=wpuoptions-settings&tab=instagram_tab');
+        $register_link = 'https://instagram.com/developer/clients/register/';
+        $api_link = 'https://api.instagram.com/oauth/authorize/?client_id=' . $this->client_id . '&redirect_uri=' . urlencode($this->redirect_uri) . '&response_type=code';
+
         echo '<div class="wrap">';
         echo '<h2>' . $this->options['name'] . '</h2>';
 
         if (empty($this->client_token)) {
             $_plugin_ok = false;
             if (empty($this->client_id) || empty($this->client_secret) || empty($this->redirect_uri)) {
-                echo '<p>Please fill in <a href="' . admin_url('admin.php?page=wpuoptions-settings&tab=instagram_tab') . '">Config details</a> or create a <a target="_blank" href="https://instagram.com/developer/clients/register/">new Instagram app</a></p>';
+                echo '<p>' . sprintf($this->__('Please fill in <a href="%s">Config details</a> or create a <a target="_blank" href="%s">new Instagram app</a>') , $admin_link, $register_link) . '</p>';
             } else {
-                echo '<p>Please <a href="https://api.instagram.com/oauth/authorize/?client_id=' . $this->client_id . '&redirect_uri=' . urlencode($this->redirect_uri) . '&response_type=code">login here</a>.</p>';
+                echo '<p>' . sprintf($this->__('Please <a href="%s">login here</a>') , $api_link) . '.</p>';
             }
-            echo '<p><strong>Request URI</strong> : <span contenteditable>' . $this->redirect_uri . '</span></p>';
+            echo '<p><strong>' . $this->__('Request URI') . '</strong> : <span contenteditable>' . $this->redirect_uri . '</span></p>';
         } else {
-            echo '<p>The plugin is configured !</p>';
+            echo '<p>' . $this->__('The plugin is configured !') . '</p>';
         }
 
         if ($_plugin_ok) {
@@ -341,7 +355,7 @@ class wpu_display_instagram
             echo '<form action="' . $this->redirect_uri . '" method="post">
             ' . wp_nonce_field($this->nonce_import . 'action', $this->nonce_import) . '
                 <p>
-                    ' . get_submit_button('Import now', 'primary', $this->options['id'] . 'import-datas') . '
+                    ' . get_submit_button($this->__('Import now') , 'primary', $this->options['id'] . 'import-datas') . '
                 </p>
             </form>';
         }
@@ -370,19 +384,19 @@ class wpu_display_instagram
 
     function options_fields($options) {
         $options['wpu_get_instagram__client_id'] = array(
-            'label' => 'Client ID',
+            'label' => $this->__('Client ID') ,
             'box' => 'instagram_config'
         );
         $options['wpu_get_instagram__client_secret'] = array(
-            'label' => 'Client Secret',
+            'label' => $this->__('Client Secret') ,
             'box' => 'instagram_config'
         );
         $options['wpu_get_instagram__client_token'] = array(
-            'label' => 'Access token',
+            'label' => $this->__('Access token') ,
             'box' => 'instagram_config'
         );
         $options['wpu_get_instagram__user_id'] = array(
-            'label' => 'User ID',
+            'label' => $this->__('User ID') ,
             'box' => 'instagram_config'
         );
         return $options;
@@ -391,6 +405,13 @@ class wpu_display_instagram
     /* ----------------------------------------------------------
       WordPress Utilities
     ---------------------------------------------------------- */
+
+    /* Translate
+     -------------------------- */
+
+    private function __($string) {
+        return __($string, 'wpudisplayinstagram');
+    }
 
     /* Set notices messages */
     private function set_message($id, $message, $group = '') {
