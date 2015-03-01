@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Display Instagram
 Description: Displays the latest image for an Instagram account
-Version: 0.7
+Version: 0.7.1
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -312,7 +312,8 @@ class wpu_display_instagram
             $count_import = $this->import();
             if ($count_import === false) {
                 $this->set_message('import_error', $this->__('The import has failed.') , 'updated');
-            } else {
+            }
+            else {
 
                 $msg_import = sprintf($this->__('%s files have been imported.') , $count_import);
                 if ($count_import < 2) {
@@ -322,8 +323,8 @@ class wpu_display_instagram
                     $msg_import = sprintf($this->__('No file have been imported.') , $count_import);
                 }
                 $this->set_message('import_success', $msg_import, 'updated');
+                update_option('wpudisplayinstagram_latestimport', current_time('timestamp', 1));
             }
-
             wp_redirect($this->redirect_uri);
             exit();
         }
@@ -334,6 +335,7 @@ class wpu_display_instagram
         $admin_link = admin_url('admin.php?page=wpuoptions-settings&tab=instagram_tab');
         $register_link = 'https://instagram.com/developer/clients/register/';
         $api_link = 'https://api.instagram.com/oauth/authorize/?client_id=' . $this->client_id . '&redirect_uri=' . urlencode($this->redirect_uri) . '&response_type=code';
+        $latestimport = get_option('wpudisplayinstagram_latestimport');
 
         echo '<div class="wrap">';
         echo '<h2>' . $this->options['name'] . '</h2>';
@@ -342,15 +344,20 @@ class wpu_display_instagram
             $_plugin_ok = false;
             if (empty($this->client_id) || empty($this->client_secret) || empty($this->redirect_uri)) {
                 echo '<p>' . sprintf($this->__('Please fill in <a href="%s">Config details</a> or create a <a target="_blank" href="%s">new Instagram app</a>') , $admin_link, $register_link) . '</p>';
-            } else {
+            }
+            else {
                 echo '<p>' . sprintf($this->__('Please <a href="%s">login here</a>') , $api_link) . '.</p>';
             }
             echo '<p><strong>' . $this->__('Request URI') . '</strong> : <span contenteditable>' . $this->redirect_uri . '</span></p>';
-        } else {
+        }
+        else {
             echo '<p>' . $this->__('The plugin is configured !') . '</p>';
         }
 
         if ($_plugin_ok) {
+            if (is_numeric($latestimport)) {
+                echo '<p>' . sprintf($this->__('Latest import : %s ago') , human_time_diff($latestimport)) . '.</p>';
+            }
 
             echo '<form action="' . $this->redirect_uri . '" method="post">
             ' . wp_nonce_field($this->nonce_import . 'action', $this->nonce_import) . '
