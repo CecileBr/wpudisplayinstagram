@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: WPU Display Instagram\n"
-"POT-Creation-Date: 2015-03-16 22:46+0100\n"
+"POT-Creation-Date: 2015-03-20 18:38+0100\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Darklg <darklg.blog@gmail.com>\n"
 "Language-Team: \n"
@@ -15,46 +15,54 @@ msgstr ""
 "X-Poedit-KeywordsList: __;_e\n"
 "X-Poedit-SearchPath-0: ../.\n"
 
-#: .././wpudisplayinstagram.php:97
+#: .././wpudisplayinstagram.php:102
 #, php-format
 msgid "The plugin %s should be installed."
 msgstr "Le plugin %s devrait être installé."
 
-#: .././wpudisplayinstagram.php:127
+#: .././wpudisplayinstagram.php:132
 msgid "The response from Instagram is invalid."
 msgstr "La réponse d'Instagram est invalide."
 
-#: .././wpudisplayinstagram.php:133
+#: .././wpudisplayinstagram.php:138
 msgid "The access token from Instagram could not be retrieved."
 msgstr "L'access token d'Instagram n'a pas être récupéré."
 
-#: .././wpudisplayinstagram.php:143
+#: .././wpudisplayinstagram.php:148
 msgid "The token have been successfully imported."
 msgstr "Le token a été importé avec succès."
 
-#: .././wpudisplayinstagram.php:168
+#: .././wpudisplayinstagram.php:173
 msgid "The datas sent by Instagram are invalid."
 msgstr "Les données renvoyées par Instagram sont invalides."
 
-#: .././wpudisplayinstagram.php:324
+#: .././wpudisplayinstagram.php:331
+msgid "The automatic import has been enabled."
+msgstr "L'import automatique a été activé."
+
+#: .././wpudisplayinstagram.php:335
+msgid "The automatic import has been disabled."
+msgstr "L'import automatique a été désactivé."
+
+#: .././wpudisplayinstagram.php:345
 msgid "The import has failed."
 msgstr "L'import a échoué."
 
-#: .././wpudisplayinstagram.php:328
+#: .././wpudisplayinstagram.php:349
 #, php-format
 msgid "%s files have been imported."
 msgstr "%s fichiers ont été importés."
 
-#: .././wpudisplayinstagram.php:330
+#: .././wpudisplayinstagram.php:351
 #, php-format
 msgid "%s file have been imported."
 msgstr "%s fichier a été importé."
 
-#: .././wpudisplayinstagram.php:333
+#: .././wpudisplayinstagram.php:354
 msgid "No file have been imported."
 msgstr "Aucun fichier n'a été importé."
 
-#: .././wpudisplayinstagram.php:356
+#: .././wpudisplayinstagram.php:374
 #, php-format
 msgid ""
 "Please fill in <a href=\"%s\">Config details</a> or create a <a target="
@@ -63,44 +71,52 @@ msgstr ""
 "Merci de remplir les <a href=\"%s\">détails de configuration</a> ou de créer "
 "une <a target=\"_blank\" href=\"%s\">nouvelle application Instagram</a>"
 
-#: .././wpudisplayinstagram.php:359
+#: .././wpudisplayinstagram.php:377
 #, php-format
 msgid "Please <a href=\"%s\">login here</a>"
 msgstr "Merci de <a href=\"%s\">vous connecter</a>"
 
-#: .././wpudisplayinstagram.php:361
+#: .././wpudisplayinstagram.php:379
 msgid "Request URI"
 msgstr "Request URI"
 
-#: .././wpudisplayinstagram.php:364
+#: .././wpudisplayinstagram.php:382
 msgid "The plugin is configured !"
 msgstr "Le plugin est configuré !"
 
-#: .././wpudisplayinstagram.php:369
+#: .././wpudisplayinstagram.php:387
 #, php-format
 msgid "Latest import : %s ago"
 msgstr "Dernier import: il y a %s"
 
-#: .././wpudisplayinstagram.php:375
+#: .././wpudisplayinstagram.php:394
 msgid "Import now"
 msgstr "Importer maintenant"
 
-#: .././wpudisplayinstagram.php:385
+#: .././wpudisplayinstagram.php:398
+msgid "Disable automatic import"
+msgstr "Désactiver l'import automatique"
+
+#: .././wpudisplayinstagram.php:401
+msgid "Enable automatic import"
+msgstr "Activer l'import automatique"
+
+#: .././wpudisplayinstagram.php:412
 msgid "Latest imports"
 msgstr "Derniers imports"
 
-#: .././wpudisplayinstagram.php:419
+#: .././wpudisplayinstagram.php:446
 msgid "Client ID"
 msgstr "Client ID"
 
-#: .././wpudisplayinstagram.php:423
+#: .././wpudisplayinstagram.php:450
 msgid "Client Secret"
 msgstr "Client Secret"
 
-#: .././wpudisplayinstagram.php:427
+#: .././wpudisplayinstagram.php:454
 msgid "Access token"
 msgstr "Access token"
 
-#: .././wpudisplayinstagram.php:431
+#: .././wpudisplayinstagram.php:458
 msgid "User ID"
 msgstr "ID Utilisateur"

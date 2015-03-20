@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Display Instagram
 Description: Displays the latest image for an Instagram account
-Version: 0.8
+Version: 0.9
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -51,7 +51,7 @@ class wpu_display_instagram
             'set_token'
         ));
         add_action('admin_init', array(&$this,
-            'admin_import_postAction'
+            'admin_postAction'
         ));
         add_action('admin_menu', array(&$this,
             'add_menu_page'
@@ -75,7 +75,7 @@ class wpu_display_instagram
         $this->user_id = trim(get_option('wpu_get_instagram__user_id'));
 
         // Admin URL
-        $this->redirect_uri = admin_url('admin.php?page=' . $this->options['id']);
+        $this->redirect_uri = admin_url('tools.php?page=' . $this->options['id']);
 
         // Transient
         $this->transient_id = $this->transient_prefix . '__json_instagram_' . $this->user_id;
@@ -321,27 +321,40 @@ class wpu_display_instagram
         }
     }
 
-    function admin_import_postAction() {
+    function admin_postAction() {
         if (isset($_POST[$this->nonce_import]) && wp_verify_nonce($_POST[$this->nonce_import], $this->nonce_import . 'action')) {
-
-            $count_import = $this->import();
-            if ($count_import === false) {
-                $this->set_message('import_error', $this->__('The import has failed.') , 'updated');
+            if (isset($_POST[$this->options['id'] . 'import-datas'])) {
+                $this->admin_postAction_import();
             }
-            else {
-
-                $msg_import = sprintf($this->__('%s files have been imported.') , $count_import);
-                if ($count_import < 2) {
-                    $msg_import = sprintf($this->__('%s file have been imported.') , $count_import);
-                }
-                if ($count_import < 1) {
-                    $msg_import = sprintf($this->__('No file have been imported.') , $count_import);
-                }
-                $this->set_message('import_success', $msg_import, 'updated');
-                update_option('wpudisplayinstagram_latestimport', current_time('timestamp', 1));
+            else if (isset($_POST[$this->options['id'] . 'enable-schedule'])) {
+                wp_schedule_event(time() , 'hourly', 'wpu_display_instagram__cron_hook');
+                $this->set_message('schedule_success', $this->__('The automatic import has been enabled.') , 'updated');
+            }
+            else if (isset($_POST[$this->options['id'] . 'disable-schedule'])) {
+                wp_unschedule_event(wp_next_scheduled('wpu_display_instagram__cron_hook') , 'wpu_display_instagram__cron_hook');
+                $this->set_message('schedule_success', $this->__('The automatic import has been disabled.') , 'updated');
             }
             wp_redirect($this->redirect_uri);
             exit();
+        }
+    }
+
+    private function admin_postAction_import() {
+        $count_import = $this->import();
+        if ($count_import === false) {
+            $this->set_message('import_error', $this->__('The import has failed.') , 'updated');
+        }
+        else {
+
+            $msg_import = sprintf($this->__('%s files have been imported.') , $count_import);
+            if ($count_import < 2) {
+                $msg_import = sprintf($this->__('%s file have been imported.') , $count_import);
+            }
+            if ($count_import < 1) {
+                $msg_import = sprintf($this->__('No file have been imported.') , $count_import);
+            }
+            $this->set_message('import_success', $msg_import, 'updated');
+            update_option('wpudisplayinstagram_latestimport', current_time('timestamp', 1));
         }
     }
 
@@ -374,12 +387,17 @@ class wpu_display_instagram
                 echo '<p>' . sprintf($this->__('Latest import : %s ago') , human_time_diff($latestimport)) . '.</p>';
             }
 
-            echo '<form action="' . $this->redirect_uri . '" method="post">
-            ' . wp_nonce_field($this->nonce_import . 'action', $this->nonce_import) . '
-                <p>
-                    ' . get_submit_button($this->__('Import now') , 'primary', $this->options['id'] . 'import-datas') . '
-                </p>
-            </form>';
+            $schedule = wp_get_schedule('wpu_display_instagram__cron_hook');
+            echo '<form action="' . $this->redirect_uri . '" method="post">';
+            echo wp_nonce_field($this->nonce_import . 'action', $this->nonce_import);
+            echo get_submit_button($this->__('Import now') , 'primary', $this->options['id'] . 'import-datas');
+            if ($schedule !== false) {
+                echo get_submit_button($this->__('Disable automatic import') , 'primary', $this->options['id'] . 'disable-schedule');
+            }
+            else {
+                echo get_submit_button($this->__('Enable automatic import') , 'primary', $this->options['id'] . 'enable-schedule');
+            }
+            echo '</form>';
 
             $wpq_instagram_posts = new WP_Query(array(
                 'posts_per_page' => 5,
