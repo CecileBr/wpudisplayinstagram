@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Display Instagram
 Description: Displays the latest image for an Instagram account
-Version: 0.9
+Version: 0.9.1
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -203,6 +203,12 @@ class wpu_display_instagram
             'post_author' => 1,
             'post_type' => $this->options['post_type']
         );
+
+        // Import as draft
+        $import_as_draft = get_option('wpu_get_instagram__import_as_draft');
+        if ($import_as_draft) {
+            $post_details['post_status'] = 'draft';
+        }
 
         // Add hashtags
         preg_match("/#(\\w+)/", $datas['caption'], $matches);
@@ -452,6 +458,11 @@ class wpu_display_instagram
         );
         $options['wpu_get_instagram__user_id'] = array(
             'label' => $this->__('User ID') ,
+            'box' => 'instagram_config'
+        );
+        $options['wpu_get_instagram__import_as_draft'] = array(
+            'label' => $this->__('Import as draft') ,
+            'type' => 'select',
             'box' => 'instagram_config'
         );
         return $options;
