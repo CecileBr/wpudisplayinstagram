@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Display Instagram
 Description: Displays the latest image for an Instagram account
-Version: 0.9.1
+Version: 0.9.2
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -250,7 +250,10 @@ class wpu_display_instagram
         $ids = array();
         $wpq_instagram_posts = new WP_Query(array(
             'posts_per_page' => 100,
-            'post_type' => $this->options['post_type']
+            'post_type' => $this->options['post_type'],
+            'orderby' => 'ID',
+            'order' => 'DESC',
+            'post_status' => 'any'
         ));
         if ($wpq_instagram_posts->have_posts()) {
             while ($wpq_instagram_posts->have_posts()) {
@@ -407,7 +410,10 @@ class wpu_display_instagram
 
             $wpq_instagram_posts = new WP_Query(array(
                 'posts_per_page' => 5,
-                'post_type' => $this->options['post_type']
+                'post_type' => $this->options['post_type'],
+                'orderby' => 'ID',
+                'order' => 'DESC',
+                'post_status' => 'any'
             ));
 
             if ($wpq_instagram_posts->have_posts()) {
