@@ -3,15 +3,14 @@
 /*
 Plugin Name: WPU Display Instagram
 Description: Displays the latest image for an Instagram account
-Version: 0.9.2
+Version: 0.9.3
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
 License URI: http://opensource.org/licenses/MIT
 */
 
-class wpu_display_instagram
-{
+class wpu_display_instagram {
 
     private $notices_categories = array(
         'updated',
@@ -20,7 +19,6 @@ class wpu_display_instagram
     );
 
     function __construct() {
-        load_plugin_textdomain('wpudisplayinstagram', false, dirname(plugin_basename(__FILE__)) . '/lang/');
 
         $this->options = array(
             'id' => 'wpu-display-instagram',
@@ -64,6 +62,9 @@ class wpu_display_instagram
     }
 
     function init() {
+
+        load_plugin_textdomain('wpudisplayinstagram', false, dirname(plugin_basename(__FILE__)) . '/lang/');
+
         global $current_user;
         $this->transient_prefix = $this->options['id'] . $current_user->ID;
         $this->nonce_import = $this->options['id'] . '__nonce_import';
@@ -168,7 +169,6 @@ class wpu_display_instagram
 
         // Extract and return informations
         $imginsta = json_decode($json_instagram);
-
         if (!is_array($imginsta->data)) {
             $this->set_message('no_array_insta', $this->__('The datas sent by Instagram are invalid.') , 'error');
             return;
@@ -297,6 +297,13 @@ class wpu_display_instagram
         // Caption
         if (isset($details->caption->text)) {
             $datas['caption'] = $details->caption->text;
+        }
+
+        if (isset($details->location->name)) {
+            if(!empty($datas['caption'])){
+                $datas['caption'] .= ' - ';
+            }
+            $datas['caption'] .=  $details->location->name;
         }
 
         return $datas;
