@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Display Instagram
 Description: Displays the latest image for an Instagram account
-Version: 0.9.3
+Version: 0.9.4
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -528,6 +528,9 @@ $wpu_display_instagram = new wpu_display_instagram();
 
 register_activation_hook(__FILE__, 'wpu_display_instagram__activation');
 function wpu_display_instagram__activation() {
+    global $wpu_display_instagram;
+    $wpu_display_instagram->register_post_types();
+    flush_rewrite_rules();
     wp_schedule_event(time() , 'hourly', 'wpu_display_instagram__cron_hook');
 }
 
