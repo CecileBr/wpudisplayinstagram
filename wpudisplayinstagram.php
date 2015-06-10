@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Display Instagram
 Description: Displays the latest image for an Instagram account
-Version: 0.9.4
+Version: 0.9.5
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -11,6 +11,7 @@ License URI: http://opensource.org/licenses/MIT
 */
 
 class wpu_display_instagram {
+    public $plugin_version = '0.9.5';
 
     private $notices_categories = array(
         'updated',
@@ -197,7 +198,7 @@ class wpu_display_instagram {
         $post_details = array(
             'post_title' => $datas['caption'],
             'post_content' => '',
-            'guid' => sanitize_title($datas['caption'], 'Instagram post') ,
+            'post_name' => preg_replace('/([^a-z0-9-$]*)/isU','',sanitize_title($datas['caption'])) ,
             'post_status' => 'publish',
             'post_date' => date('Y-m-d H:i:s', $datas['created_time']) ,
             'post_author' => 1,
