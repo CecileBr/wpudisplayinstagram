@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Display Instagram
 Description: Displays the latest image for an Instagram account
-Version: 0.9.5
+Version: 0.10
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -22,10 +22,11 @@ class wpu_display_instagram {
     function __construct() {
 
         $this->options = array(
+            'plugin_version' => '0.10',
             'id' => 'wpu-display-instagram',
             'name' => 'Display Instagram',
             'post_type' => 'instagram_posts',
-            'cache_duration' => 60
+            'cache_duration' => 60,
         );
 
         add_filter('wpu_options_tabs', array(&$this,
@@ -55,6 +56,9 @@ class wpu_display_instagram {
         add_action('admin_menu', array(&$this,
             'add_menu_page'
         ));
+        add_filter("plugin_action_links_" . plugin_basename(__FILE__) , array(&$this,
+            'settings_link'
+        ));
 
         // Display notices
         add_action('admin_notices', array(&$this,
@@ -67,7 +71,7 @@ class wpu_display_instagram {
         load_plugin_textdomain('wpudisplayinstagram', false, dirname(plugin_basename(__FILE__)) . '/lang/');
 
         global $current_user;
-        $this->transient_prefix = $this->options['id'] . $current_user->ID;
+        $this->transient_prefix = $this->options['id'] . $current_user->ID . '__' . $this->options['plugin_version'];
         $this->nonce_import = $this->options['id'] . '__nonce_import';
 
         // Instagram config
@@ -198,7 +202,7 @@ class wpu_display_instagram {
         $post_details = array(
             'post_title' => $datas['caption'],
             'post_content' => '',
-            'post_name' => preg_replace('/([^a-z0-9-$]*)/isU','',sanitize_title($datas['caption'])) ,
+            'post_name' => preg_replace('/([^a-z0-9-$]*)/isU', '', sanitize_title($datas['caption'])) ,
             'post_status' => 'publish',
             'post_date' => date('Y-m-d H:i:s', $datas['created_time']) ,
             'post_author' => 1,
@@ -301,10 +305,10 @@ class wpu_display_instagram {
         }
 
         if (isset($details->location->name)) {
-            if(!empty($datas['caption'])){
-                $datas['caption'] .= ' - ';
+            if (!empty($datas['caption'])) {
+                $datas['caption'].= ' - ';
             }
-            $datas['caption'] .=  $details->location->name;
+            $datas['caption'].= $details->location->name;
         }
 
         return $datas;
@@ -332,10 +336,19 @@ class wpu_display_instagram {
 
     function add_menu_page() {
         if ($this->plugins['wpuoptions']['installed']) {
-            add_management_page($this->options['name'], $this->options['name'], 'manage_options', $this->options['id'], array(&$this,
+            add_menu_page($this->options['name'], $this->options['name'], 'manage_options', $this->options['id'], array(&$this,
                 'admin_page'
-            ) , 'dashicons-admin-generic');
+            ) , 'dashicons-index-card');
         }
+    }
+
+    /**
+     * Settings link
+     */
+    function settings_link($links) {
+        $settings_link = '<a href="' . admin_url('admin.php?page=' . $this->options['id']) . '">' . $this->__('Settings') . '</a>';
+        array_unshift($links, $settings_link);
+        return $links;
     }
 
     function admin_postAction() {
@@ -529,7 +542,7 @@ $wpu_display_instagram = new wpu_display_instagram();
 
 register_activation_hook(__FILE__, 'wpu_display_instagram__activation');
 function wpu_display_instagram__activation() {
-    global $wpu_display_instagram;
+    $wpu_display_instagram = new wpu_display_instagram();
     $wpu_display_instagram->register_post_types();
     flush_rewrite_rules();
     wp_schedule_event(time() , 'hourly', 'wpu_display_instagram__cron_hook');
@@ -537,7 +550,63 @@ function wpu_display_instagram__activation() {
 
 add_action('wpu_display_instagram__cron_hook', 'wpu_display_instagram__import');
 function wpu_display_instagram__import() {
-    global $wpu_display_instagram;
+    $wpu_display_instagram = new wpu_display_instagram();
     $wpu_display_instagram->import();
 }
 
+/* ----------------------------------------------------------
+  Widget
+---------------------------------------------------------- */
+
+add_action('widgets_init', 'wpudisplayinstagram_register_widgets');
+function wpudisplayinstagram_register_widgets() {
+    register_widget('wpudisplayinstagram');
+}
+
+class wpudisplayinstagram extends WP_Widget {
+    function wpudisplayinstagram() {
+        parent::WP_Widget(false, '[WPU] Display Instagram', array(
+            'description' => 'Display Instagram'
+        ));
+    }
+    function form($instance) {
+        load_plugin_textdomain('wpudisplayinstagram', false, dirname(plugin_basename(__FILE__)) . '/lang/');
+        $nb_items = is_numeric($instance['nb_items']) ? $instance['nb_items'] : 1; ?>
+        <p>
+        <label for="<?php echo $this->get_field_id('nb_items'); ?>"><?php _e('Number of pictures displayed:', 'wpudisplayinstagram'); ?></label>
+        <input class="widefat" id="<?php echo $this->get_field_id('nb_items'); ?>" name="<?php echo $this->get_field_name('nb_items'); ?>" type="text" value="<?php echo esc_attr($nb_items); ?>">
+        </p>
+        <?php
+    }
+    function update($new_instance, $old_instance) {
+        return array(
+            'nb_items' => is_numeric($new_instance['nb_items']) ? $new_instance['nb_items'] : 1
+        );
+    }
+    function widget($args, $instance) {
+        global $wpu_display_instagram;
+        echo $args['before_widget'];
+        $wpq_instagram_posts = new WP_Query(array(
+            'posts_per_page' => $instance['nb_items'],
+            'post_type' => $wpu_display_instagram->options['post_type'],
+            'orderby' => 'ID',
+            'order' => 'DESC',
+            'post_status' => 'any'
+        ));
+        if ($wpq_instagram_posts->have_posts()) {
+            echo '<ul class="wpu-display-instagram__list">';
+            while ($wpq_instagram_posts->have_posts()) {
+                $wpq_instagram_posts->the_post();
+                echo '<li class="instagram-item">';
+                echo '<a class="instagram-link" target="_blank" href="' . get_post_meta(get_the_ID() , 'instagram_post_link', 1) . '">';
+                the_post_thumbnail();
+                echo '</a>';
+                echo '</li>';
+            }
+            echo '</ul>';
+        }
+        wp_reset_postdata();
+
+        echo $args['after_widget'];
+    }
+}
