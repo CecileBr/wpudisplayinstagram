@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Display Instagram
 Description: Displays the latest image for an Instagram account
-Version: 0.10
+Version: 0.10.1
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -11,7 +11,7 @@ License URI: http://opensource.org/licenses/MIT
 */
 
 class wpu_display_instagram {
-    public $plugin_version = '0.9.5';
+    public $plugin_version = '0.10.1';
 
     private $notices_categories = array(
         'updated',
@@ -67,11 +67,17 @@ class wpu_display_instagram {
     }
 
     function init() {
+        $this->init_content(false);
+    }
 
+    function init_content($cron = true) {
         load_plugin_textdomain('wpudisplayinstagram', false, dirname(plugin_basename(__FILE__)) . '/lang/');
-
         global $current_user;
-        $this->transient_prefix = $this->options['id'] . $current_user->ID . '__' . $this->options['plugin_version'];
+        $this->transient_prefix = $this->options['id'];
+        if (!$cron) {
+            $this->transient_prefix.= $current_user->ID;
+        }
+        $this->transient_prefix.= '__' . $this->options['plugin_version'];
         $this->nonce_import = $this->options['id'] . '__nonce_import';
 
         // Instagram config
@@ -156,7 +162,7 @@ class wpu_display_instagram {
         exit();
     }
 
-    function import() {
+    function import($cron = false) {
         if (empty($this->client_id)) {
             $this->set_token();
         }
@@ -175,7 +181,9 @@ class wpu_display_instagram {
         // Extract and return informations
         $imginsta = json_decode($json_instagram);
         if (!is_array($imginsta->data)) {
-            $this->set_message('no_array_insta', $this->__('The datas sent by Instagram are invalid.') , 'error');
+            if (!$cron) {
+                $this->set_message('no_array_insta', $this->__('The datas sent by Instagram are invalid.') , 'error');
+            }
             return;
         }
 
@@ -551,7 +559,8 @@ function wpu_display_instagram__activation() {
 add_action('wpu_display_instagram__cron_hook', 'wpu_display_instagram__import');
 function wpu_display_instagram__import() {
     $wpu_display_instagram = new wpu_display_instagram();
-    $wpu_display_instagram->import();
+    $wpu_display_instagram->init_content(true);
+    $wpu_display_instagram->import(true);
 }
 
 /* ----------------------------------------------------------
@@ -564,8 +573,8 @@ function wpudisplayinstagram_register_widgets() {
 }
 
 class wpudisplayinstagram extends WP_Widget {
-    function wpudisplayinstagram() {
-        parent::WP_Widget(false, '[WPU] Display Instagram', array(
+    function __construct() {
+        parent::__construct(false, '[WPU] Display Instagram', array(
             'description' => 'Display Instagram'
         ));
     }
