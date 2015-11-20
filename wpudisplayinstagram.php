@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Display Instagram
 Description: Displays the latest image for an Instagram account
-Version: 0.10.1
+Version: 0.11
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -11,7 +11,7 @@ License URI: http://opensource.org/licenses/MIT
 */
 
 class wpu_display_instagram {
-    public $plugin_version = '0.10.1';
+    public $plugin_version = '0.11';
 
     private $notices_categories = array(
         'updated',
@@ -85,9 +85,10 @@ class wpu_display_instagram {
         $this->client_id = trim(get_option('wpu_get_instagram__client_id'));
         $this->client_secret = trim(get_option('wpu_get_instagram__client_secret'));
         $this->user_id = trim(get_option('wpu_get_instagram__user_id'));
+        $this->request_url = 'https://api.instagram.com/v1/users/' . $this->user_id . '/media/recent/?count=%s&access_token=' . $this->client_token;
 
         // Admin URL
-        $this->redirect_uri = admin_url('tools.php?page=' . $this->options['id']);
+        $this->redirect_uri = admin_url('edit.php?post_type=' . $this->options['post_type'] . '&page=' . $this->options['id']);
 
         // Transient
         $this->transient_id = $this->transient_prefix . '__json_instagram_' . $this->user_id;
@@ -127,7 +128,6 @@ class wpu_display_instagram {
         }
 
         $url = 'https://api.instagram.com/oauth/access_token';
-        $request = new WP_Http;
         $result = wp_remote_post($url, array(
             'body' => array(
                 'client_id' => $this->client_id,
@@ -169,17 +169,19 @@ class wpu_display_instagram {
 
         $nb_items = 10;
         $imported_items = $this->get_imported_items();
-        $request_url = 'https://api.instagram.com/v1/users/' . $this->user_id . '/media/recent/?count=' . $nb_items . '&access_token=' . $this->client_token;
+        $request_url = sprintf($this->request_url, $nb_items);
 
         // Get cached JSON
-        $json_instagram = get_transient($this->transient_id);
-        if (empty($json_instagram)) {
-            $json_instagram = file_get_contents($request_url);
-            set_transient($this->transient_id, $json_instagram, $this->options['cache_duration']);
+        $request = wp_remote_get($request_url);
+        if (!is_array($request) || !isset($request['body'])) {
+            if (!$cron) {
+                $this->set_message('no_array_insta', $this->__('The datas sent by Instagram are invalid.') , 'error');
+            }
+            return;
         }
 
         // Extract and return informations
-        $imginsta = json_decode($json_instagram);
+        $imginsta = json_decode($request['body']);
         if (!is_array($imginsta->data)) {
             if (!$cron) {
                 $this->set_message('no_array_insta', $this->__('The datas sent by Instagram are invalid.') , 'error');
@@ -330,6 +332,7 @@ class wpu_display_instagram {
         register_post_type($this->options['post_type'], array(
             'public' => true,
             'label' => 'Instagram posts',
+            'menu_icon' => 'dashicons-format-image',
             'supports' => array(
                 'title',
                 'editor',
@@ -344,9 +347,9 @@ class wpu_display_instagram {
 
     function add_menu_page() {
         if ($this->plugins['wpuoptions']['installed']) {
-            add_menu_page($this->options['name'], $this->options['name'], 'manage_options', $this->options['id'], array(&$this,
+            add_submenu_page('edit.php?post_type=' . $this->options['post_type'], $this->options['name'], __('Settings') , 'manage_options', $this->options['id'], array(&$this,
                 'admin_page'
-            ) , 'dashicons-index-card');
+            ));
         }
     }
 
@@ -354,7 +357,7 @@ class wpu_display_instagram {
      * Settings link
      */
     function settings_link($links) {
-        $settings_link = '<a href="' . admin_url('admin.php?page=' . $this->options['id']) . '">' . $this->__('Settings') . '</a>';
+        $settings_link = '<a href="' . $this->redirect_uri . '">' . $this->__('Settings') . '</a>';
         array_unshift($links, $settings_link);
         return $links;
     }
@@ -363,6 +366,10 @@ class wpu_display_instagram {
         if (isset($_POST[$this->nonce_import]) && wp_verify_nonce($_POST[$this->nonce_import], $this->nonce_import . 'action')) {
             if (isset($_POST[$this->options['id'] . 'import-datas'])) {
                 $this->admin_postAction_import();
+            }
+            else if (isset($_POST[$this->options['id'] . 'import-test'])) {
+                $returnTest = $this->admin_postAction_importTest();
+                $this->set_message('importtest_success', ($returnTest ? $this->__('The API works great.') : $this->__('The API do not work.')) , ($returnTest ? 'updated' : 'error'));
             }
             else if (isset($_POST[$this->options['id'] . 'enable-schedule'])) {
                 wp_schedule_event(time() , 'hourly', 'wpu_display_instagram__cron_hook');
@@ -375,6 +382,16 @@ class wpu_display_instagram {
             wp_redirect($this->redirect_uri);
             exit();
         }
+    }
+
+    private function admin_postAction_importTest() {
+
+        $request = wp_remote_get(sprintf($this->request_url, 2));
+        if (!is_array($request) || !isset($request['body'])) {
+            return false;
+        }
+
+        return is_object(json_decode($request['body']));
     }
 
     private function admin_postAction_import() {
@@ -404,7 +421,7 @@ class wpu_display_instagram {
         $latestimport = get_option('wpudisplayinstagram_latestimport');
 
         echo '<div class="wrap">';
-        echo '<h2>' . $this->options['name'] . '</h2>';
+        echo '<h1>' . get_admin_page_title() . '</h1>';
 
         if (empty($this->client_token)) {
             $_plugin_ok = false;
@@ -428,7 +445,8 @@ class wpu_display_instagram {
             $schedule = wp_get_schedule('wpu_display_instagram__cron_hook');
             echo '<form action="' . $this->redirect_uri . '" method="post">';
             echo wp_nonce_field($this->nonce_import . 'action', $this->nonce_import);
-            echo get_submit_button($this->__('Import now') , 'primary', $this->options['id'] . 'import-datas');
+            echo get_submit_button($this->__('Import now') , 'primary', $this->options['id'] . 'import-datas', false) . ' ';
+            echo get_submit_button($this->__('Test import') , 'secondary', $this->options['id'] . 'import-test', false);
             if ($schedule !== false) {
                 echo get_submit_button($this->__('Disable automatic import') , 'primary', $this->options['id'] . 'disable-schedule');
             }
