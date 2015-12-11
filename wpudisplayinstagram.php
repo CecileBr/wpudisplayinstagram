@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Display Instagram
 Description: Displays the latest image for an Instagram account
-Version: 0.12
+Version: 0.12.1
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -11,7 +11,7 @@ License URI: http://opensource.org/licenses/MIT
 */
 
 class wpu_display_instagram {
-    public $plugin_version = '0.12';
+    public $plugin_version = '0.12.1';
 
     private $notices_categories = array(
         'updated',
@@ -121,11 +121,11 @@ class wpu_display_instagram {
     function get_user_id() {
 
         /* Get from DB */
-        if (!$this->user_id) {
+        if (!property_exists($this, 'user_id')) {
             $this->user_id = trim(get_option('wpu_get_instagram__user_id'));
         }
 
-        if (!$this->user_name) {
+        if (!property_exists($this, 'user_name')) {
             $this->user_name = trim(get_option('wpu_get_instagram__user_name'));
         }
 
@@ -250,7 +250,7 @@ class wpu_display_instagram {
 
         // Set post details
 
-        $post_title = wp_trim_words($datas['caption'],20);
+        $post_title = wp_trim_words($datas['caption'], 20);
 
         $post_details = array(
             'post_title' => $post_title,
