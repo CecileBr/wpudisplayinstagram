@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Display Instagram
 Description: Displays the latest image for an Instagram account
-Version: 0.12.1
+Version: 0.12.2
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -11,7 +11,7 @@ License URI: http://opensource.org/licenses/MIT
 */
 
 class wpu_display_instagram {
-    public $plugin_version = '0.12.1';
+    public $plugin_version = '0.12.2';
 
     private $notices_categories = array(
         'updated',
@@ -223,7 +223,7 @@ class wpu_display_instagram {
 
         // Extract and return informations
         $imginsta = json_decode($request['body']);
-        if (!is_array($imginsta->data)) {
+        if (!is_object($imginsta) || !is_array($imginsta->data)) {
             if (!$cron) {
                 $this->set_message('no_array_insta', $this->__('The datas sent by Instagram are invalid.') , 'error');
             }
@@ -269,7 +269,7 @@ class wpu_display_instagram {
         }
 
         // Add hashtags
-        preg_match("/#(\\w+)/", $datas['caption'], $matches);
+        preg_match_all("/#(\\w+)/", $datas['caption'], $matches);
         if (!empty($matches[1])) {
             $post_details['tags_input'] = implode(', ', $matches[1]);
         }
@@ -603,6 +603,16 @@ class wpu_display_instagram {
         // Empty messages
         delete_transient($this->transient_msg);
     }
+
+    public function uninstall() {
+
+        // Delete options
+        $fields = $this->options_fields();
+        foreach ($fields as $key => $field) {
+            delete_option($key);
+        }
+    }
+
 }
 
 $wpu_display_instagram = new wpu_display_instagram();
@@ -617,6 +627,14 @@ function wpu_display_instagram__activation() {
     $wpu_display_instagram->register_post_types();
     flush_rewrite_rules();
     wp_schedule_event(time() , 'hourly', 'wpu_display_instagram__cron_hook');
+}
+
+register_deactivation_hook(__FILE__, 'wpu_display_instagram__deactivation');
+function wpu_display_instagram__deactivation() {
+    $wpu_display_instagram = new wpu_display_instagram();
+    $wpu_display_instagram->register_post_types();
+    $timestamp = wp_next_scheduled( 'wpu_display_instagram__cron_hook' );
+    wp_unschedule_event($timestamp , 'hourly', 'wpu_display_instagram__cron_hook');
 }
 
 add_action('wpu_display_instagram__cron_hook', 'wpu_display_instagram__import');
@@ -656,10 +674,11 @@ class wpudisplayinstagram extends WP_Widget {
         );
     }
     function widget($args, $instance) {
+        $nb_items = isset($instance['nb_items']) && is_numeric($instance['nb_items']) ? $instance['nb_items'] : 5;
         global $wpu_display_instagram;
         echo $args['before_widget'];
         $wpq_instagram_posts = new WP_Query(array(
-            'posts_per_page' => $instance['nb_items'],
+            'posts_per_page' => $nb_items,
             'post_type' => $wpu_display_instagram->options['post_type'],
             'orderby' => 'ID',
             'order' => 'DESC',
