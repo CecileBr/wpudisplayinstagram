@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Display Instagram
 Description: Displays the latest image for an Instagram account
-Version: 0.12.2
+Version: 0.12.3
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -11,7 +11,7 @@ License URI: http://opensource.org/licenses/MIT
 */
 
 class wpu_display_instagram {
-    public $plugin_version = '0.12.2';
+    public $plugin_version = '0.12.3';
 
     private $notices_categories = array(
         'updated',
@@ -611,6 +611,11 @@ class wpu_display_instagram {
         foreach ($fields as $key => $field) {
             delete_option($key);
         }
+
+        // Delete fields
+        delete_post_meta_by_key('instagram_post_id');
+        delete_post_meta_by_key('instagram_post_link');
+        delete_post_meta_by_key('instagram_post_datas');
     }
 
 }
@@ -634,7 +639,9 @@ function wpu_display_instagram__deactivation() {
     $wpu_display_instagram = new wpu_display_instagram();
     $wpu_display_instagram->register_post_types();
     $timestamp = wp_next_scheduled( 'wpu_display_instagram__cron_hook' );
+    wp_clear_scheduled_hook('wpu_display_instagram__cron_hook');
     wp_unschedule_event($timestamp , 'hourly', 'wpu_display_instagram__cron_hook');
+    flush_rewrite_rules();
 }
 
 add_action('wpu_display_instagram__cron_hook', 'wpu_display_instagram__import');
