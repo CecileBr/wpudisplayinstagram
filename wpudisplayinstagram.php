@@ -1,9 +1,9 @@
 <?php
 
 /*
-Plugin Name: WPU Display Instagram
-Description: Displays the latest image for an Instagram account
-Version: 0.12.3
+Plugin Name: WPU Import Instagram
+Description: Import the latest instagram images
+Version: 0.12.4
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -11,7 +11,7 @@ License URI: http://opensource.org/licenses/MIT
 */
 
 class wpu_display_instagram {
-    public $plugin_version = '0.12.3';
+    public $plugin_version = '0.12.4';
 
     private $notices_categories = array(
         'updated',
@@ -19,22 +19,22 @@ class wpu_display_instagram {
         'error'
     );
 
-    function __construct() {
+    public function __construct() {
         $this->options = array(
             'id' => 'wpu-display-instagram',
-            'name' => 'Display Instagram',
-            'post_type' => 'instagram_posts',
+            'name' => 'Import Instagram',
+            'post_type' => 'instagram_posts'
         );
 
         add_filter('wpu_options_tabs', array(&$this,
             'options_tabs'
-        ) , 10, 3);
+        ), 10, 3);
         add_filter('wpu_options_boxes', array(&$this,
             'options_boxes'
-        ) , 12, 3);
+        ), 12, 3);
         add_filter('wpu_options_fields', array(&$this,
             'options_fields'
-        ) , 12, 3);
+        ), 12, 3);
         add_filter('init', array(&$this,
             'init'
         ));
@@ -53,7 +53,7 @@ class wpu_display_instagram {
         add_action('admin_menu', array(&$this,
             'add_menu_page'
         ));
-        add_filter("plugin_action_links_" . plugin_basename(__FILE__) , array(&$this,
+        add_filter("plugin_action_links_" . plugin_basename(__FILE__), array(&$this,
             'settings_link'
         ));
 
@@ -63,18 +63,18 @@ class wpu_display_instagram {
         ));
     }
 
-    function init() {
+    public function init() {
         $this->init_content(false);
     }
 
-    function init_content($cron = true) {
+    public function init_content($cron = true) {
         load_plugin_textdomain('wpudisplayinstagram', false, dirname(plugin_basename(__FILE__)) . '/lang/');
         global $current_user;
         $this->transient_prefix = $this->options['id'];
         if (!$cron) {
-            $this->transient_prefix.= $current_user->ID;
+            $this->transient_prefix .= $current_user->ID;
         }
-        $this->transient_prefix.= '__' . $this->plugin_version;
+        $this->transient_prefix .= '__' . $this->plugin_version;
         $this->nonce_import = $this->options['id'] . '__nonce_import';
 
         // Instagram config
@@ -92,24 +92,24 @@ class wpu_display_instagram {
         $this->transient_msg = $this->transient_prefix . '__messages';
     }
 
-    function check_dependencies() {
+    public function check_dependencies() {
         if (!is_admin()) {
             return;
         }
-        include_once (ABSPATH . 'wp-admin/includes/plugin.php');
+        include_once ABSPATH . 'wp-admin/includes/plugin.php';
 
         // Check for Plugins activation
         $this->plugins = array(
             'wpuoptions' => array(
                 'installed' => true,
                 'path' => 'wpuoptions/wpuoptions.php',
-                'message_url' => '<a target="_blank" href="https://github.com/WordPressUtilities/wpuoptions">WPU Options</a>',
+                'message_url' => '<a target="_blank" href="https://github.com/WordPressUtilities/wpuoptions">WPU Options</a>'
             )
         );
         foreach ($this->plugins as $id => $plugin) {
             if (!is_plugin_active($plugin['path'])) {
                 $this->plugins[$id]['installed'] = false;
-                $this->set_message($id . '__not_installed', sprintf($this->__('The plugin %s should be installed.') , $plugin['message_url']) , 'error');
+                $this->set_message($id . '__not_installed', sprintf($this->__('The plugin %s should be installed.'), $plugin['message_url']), 'error');
             }
         }
     }
@@ -118,7 +118,7 @@ class wpu_display_instagram {
       API
     ---------------------------------------------------------- */
 
-    function get_user_id() {
+    public function get_user_id() {
 
         /* Get from DB */
         if (!property_exists($this, 'user_id')) {
@@ -162,7 +162,7 @@ class wpu_display_instagram {
         return false;
     }
 
-    function set_token() {
+    public function set_token() {
 
         if (!is_admin() || !isset($_GET['page']) || $_GET['page'] != $this->options['id'] || !isset($_GET['code'])) {
             return;
@@ -175,20 +175,20 @@ class wpu_display_instagram {
                 'client_secret' => $this->client_secret,
                 'grant_type' => 'authorization_code',
                 'redirect_uri' => $this->redirect_uri,
-                'code' => $_GET['code'],
+                'code' => $_GET['code']
             )
         ));
 
         $token = '';
         $response = '{}';
         if (!isset($result['body'])) {
-            $this->set_message('token_no_body', $this->__('The response from Instagram is invalid.') , 'error');
+            $this->set_message('token_no_body', $this->__('The response from Instagram is invalid.'), 'error');
             return;
         }
         $response = json_decode($result['body']);
 
         if (!isset($response->access_token)) {
-            $this->set_message('token_no_token', $this->__('The access token from Instagram could not be retrieved.') , 'error');
+            $this->set_message('token_no_token', $this->__('The access token from Instagram could not be retrieved.'), 'error');
             return;
         }
 
@@ -198,12 +198,12 @@ class wpu_display_instagram {
         update_option('wpu_get_instagram__client_token', $this->client_token);
         update_option('wpu_get_instagram__user_id', $this->user_id);
 
-        $this->set_message('token_success', $this->__('The token have been successfully imported.') , 'updated');
+        $this->set_message('token_success', $this->__('The token have been successfully imported.'), 'updated');
         wp_redirect($this->redirect_uri);
         exit();
     }
 
-    function import($cron = false) {
+    public function import($cron = false) {
         if (empty($this->client_id)) {
             $this->set_token();
         }
@@ -216,7 +216,7 @@ class wpu_display_instagram {
         $request = wp_remote_get($request_url);
         if (!is_array($request) || !isset($request['body'])) {
             if (!$cron) {
-                $this->set_message('no_array_insta', $this->__('The datas sent by Instagram are invalid.') , 'error');
+                $this->set_message('no_array_insta', $this->__('The datas sent by Instagram are invalid.'), 'error');
             }
             return;
         }
@@ -225,7 +225,7 @@ class wpu_display_instagram {
         $imginsta = json_decode($request['body']);
         if (!is_object($imginsta) || !is_array($imginsta->data)) {
             if (!$cron) {
-                $this->set_message('no_array_insta', $this->__('The datas sent by Instagram are invalid.') , 'error');
+                $this->set_message('no_array_insta', $this->__('The datas sent by Instagram are invalid.'), 'error');
             }
             return;
         }
@@ -246,7 +246,7 @@ class wpu_display_instagram {
       Import functions
     ---------------------------------------------------------- */
 
-    function import_item($datas, $original_item) {
+    public function import_item($datas, $original_item) {
 
         // Set post details
 
@@ -255,9 +255,9 @@ class wpu_display_instagram {
         $post_details = array(
             'post_title' => $post_title,
             'post_content' => $datas['caption'],
-            'post_name' => preg_replace('/([^a-z0-9-$]*)/isU', '', sanitize_title($post_title)) ,
+            'post_name' => preg_replace('/([^a-z0-9-$]*)/isU', '', sanitize_title($post_title)),
             'post_status' => 'publish',
-            'post_date' => date('Y-m-d H:i:s', $datas['created_time']) ,
+            'post_date' => date('Y-m-d H:i:s', $datas['created_time']),
             'post_author' => 1,
             'post_type' => $this->options['post_type']
         );
@@ -282,10 +282,15 @@ class wpu_display_instagram {
         update_post_meta($post_id, 'instagram_post_link', $datas['link']);
         update_post_meta($post_id, 'instagram_post_datas', $datas);
 
+        if ($datas['location']['latitude'] != 0) {
+            update_post_meta($post_id, 'instagram_post_latitude', $datas['location']['latitude']);
+            update_post_meta($post_id, 'instagram_post_longitude', $datas['location']['longitude']);
+        }
+
         // Add required classes
-        require_once (ABSPATH . 'wp-admin/includes/media.php');
-        require_once (ABSPATH . 'wp-admin/includes/file.php');
-        require_once (ABSPATH . 'wp-admin/includes/image.php');
+        require_once ABSPATH . 'wp-admin/includes/media.php';
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+        require_once ABSPATH . 'wp-admin/includes/image.php';
 
         // Import image as an attachment
         $image = media_sideload_image($datas['image'], $post_id, $datas['caption']);
@@ -304,18 +309,22 @@ class wpu_display_instagram {
         }
     }
 
-    function get_imported_items() {
+    public function get_imported_items() {
         global $wpdb;
         $wpids = $wpdb->get_col("SELECT meta_value FROM $wpdb->postmeta WHERE meta_key = 'instagram_post_id'");
         return is_array($wpids) ? $wpids : array();
     }
 
-    function get_datas_from_item($details) {
+    public function get_datas_from_item($details) {
         $datas = array(
             'image' => '',
             'link' => '#',
             'created_time' => '0',
             'caption' => '',
+            'location' => array(
+                'latitude' => 0,
+                'longitude' => 0
+            ),
             'id' => 0
         );
 
@@ -346,9 +355,17 @@ class wpu_display_instagram {
 
         if (isset($details->location->name)) {
             if (!empty($datas['caption'])) {
-                $datas['caption'].= ' - ';
+                $datas['caption'] .= ' - ';
             }
-            $datas['caption'].= $details->location->name;
+            $datas['caption'] .= $details->location->name;
+        }
+
+        // Location
+        if (isset($details->location->latitude, $details->location->longitude)) {
+            $datas['location'] = array(
+                'latitude' => $details->location->latitude,
+                'longitude' => $details->location->longitude
+            );
         }
 
         return $datas;
@@ -358,7 +375,7 @@ class wpu_display_instagram {
       Post type
     ---------------------------------------------------------- */
 
-    function register_post_types() {
+    public function register_post_types() {
         register_post_type($this->options['post_type'], array(
             'public' => true,
             'label' => 'Instagram posts',
@@ -375,9 +392,9 @@ class wpu_display_instagram {
       Admin page
     ---------------------------------------------------------- */
 
-    function add_menu_page() {
+    public function add_menu_page() {
         if ($this->plugins['wpuoptions']['installed']) {
-            add_submenu_page($this->admin_uri, $this->options['name'], __('Settings') , 'manage_options', $this->options['id'], array(&$this,
+            add_submenu_page($this->admin_uri, $this->options['name'], __('Settings'), 'manage_options', $this->options['id'], array(&$this,
                 'admin_page'
             ));
         }
@@ -386,28 +403,25 @@ class wpu_display_instagram {
     /**
      * Settings link
      */
-    function settings_link($links) {
+    public function settings_link($links) {
         $settings_link = '<a href="' . $this->redirect_uri . '">' . $this->__('Settings') . '</a>';
         array_unshift($links, $settings_link);
         return $links;
     }
 
-    function admin_postAction() {
+    public function admin_postAction() {
         if (isset($_POST[$this->nonce_import]) && wp_verify_nonce($_POST[$this->nonce_import], $this->nonce_import . 'action')) {
             if (isset($_POST[$this->options['id'] . 'import-datas'])) {
                 $this->admin_postAction_import();
-            }
-            else if (isset($_POST[$this->options['id'] . 'import-test'])) {
+            } else if (isset($_POST[$this->options['id'] . 'import-test'])) {
                 $returnTest = $this->admin_postAction_importTest();
-                $this->set_message('importtest_success', ($returnTest ? $this->__('The API works great.') : $this->__('The API do not work.')) , ($returnTest ? 'updated' : 'error'));
-            }
-            else if (isset($_POST[$this->options['id'] . 'enable-schedule'])) {
-                wp_schedule_event(time() , 'hourly', 'wpu_display_instagram__cron_hook');
-                $this->set_message('schedule_success', $this->__('The automatic import has been enabled.') , 'updated');
-            }
-            else if (isset($_POST[$this->options['id'] . 'disable-schedule'])) {
-                wp_unschedule_event(wp_next_scheduled('wpu_display_instagram__cron_hook') , 'wpu_display_instagram__cron_hook');
-                $this->set_message('schedule_success', $this->__('The automatic import has been disabled.') , 'updated');
+                $this->set_message('importtest_success', ($returnTest ? $this->__('The API works great.') : $this->__('The API do not work.')), ($returnTest ? 'updated' : 'error'));
+            } else if (isset($_POST[$this->options['id'] . 'enable-schedule'])) {
+                wp_schedule_event(time(), 'hourly', 'wpu_display_instagram__cron_hook');
+                $this->set_message('schedule_success', $this->__('The automatic import has been enabled.'), 'updated');
+            } else if (isset($_POST[$this->options['id'] . 'disable-schedule'])) {
+                wp_unschedule_event(wp_next_scheduled('wpu_display_instagram__cron_hook'), 'wpu_display_instagram__cron_hook');
+                $this->set_message('schedule_success', $this->__('The automatic import has been disabled.'), 'updated');
             }
             wp_redirect($this->redirect_uri);
             exit();
@@ -438,23 +452,22 @@ class wpu_display_instagram {
     private function admin_postAction_import() {
         $count_import = $this->import();
         if ($count_import === false) {
-            $this->set_message('import_error', $this->__('The import has failed.') , 'updated');
-        }
-        else {
+            $this->set_message('import_error', $this->__('The import has failed.'), 'updated');
+        } else {
 
-            $msg_import = sprintf($this->__('%s files have been imported.') , $count_import);
+            $msg_import = sprintf($this->__('%s files have been imported.'), $count_import);
             if ($count_import < 2) {
-                $msg_import = sprintf($this->__('%s file have been imported.') , $count_import);
+                $msg_import = sprintf($this->__('%s file have been imported.'), $count_import);
             }
             if ($count_import < 1) {
-                $msg_import = sprintf($this->__('No file have been imported.') , $count_import);
+                $msg_import = sprintf($this->__('No file have been imported.'), $count_import);
             }
             $this->set_message('import_success', $msg_import, 'updated');
             update_option('wpudisplayinstagram_latestimport', current_time('timestamp', 1));
         }
     }
 
-    function admin_page() {
+    public function admin_page() {
         $_plugin_ok = true;
         $admin_link = admin_url('admin.php?page=wpuoptions-settings&tab=instagram_tab');
         $register_link = 'https://instagram.com/developer/clients/register/';
@@ -467,32 +480,29 @@ class wpu_display_instagram {
         if (empty($this->client_token)) {
             $_plugin_ok = false;
             if (empty($this->client_id) || empty($this->client_secret) || empty($this->redirect_uri)) {
-                echo '<p>' . sprintf($this->__('Please fill in <a href="%s">Config details</a> or create a <a target="_blank" href="%s">new Instagram app</a>') , $admin_link, $register_link) . '</p>';
-            }
-            else {
-                echo '<p>' . sprintf($this->__('Please <a href="%s">login here</a>') , $api_link) . '.</p>';
+                echo '<p>' . sprintf($this->__('Please fill in <a href="%s">Config details</a> or create a <a target="_blank" href="%s">new Instagram app</a>'), $admin_link, $register_link) . '</p>';
+            } else {
+                echo '<p>' . sprintf($this->__('Please <a href="%s">login here</a>'), $api_link) . '.</p>';
             }
             echo '<p><strong>' . $this->__('Request URI') . '</strong> : <span contenteditable>' . $this->redirect_uri . '</span></p>';
         }
 
         if ($_plugin_ok) {
             if (is_numeric($latestimport)) {
-                echo '<p>' . sprintf($this->__('Latest import : %s ago') , human_time_diff($latestimport)) . '.</p>';
-            }
-            else {
+                echo '<p>' . sprintf($this->__('Latest import : %s ago'), human_time_diff($latestimport)) . '.</p>';
+            } else {
                 echo '<p>' . $this->__('The plugin is configured !') . '</p>';
             }
 
             $schedule = wp_get_schedule('wpu_display_instagram__cron_hook');
             echo '<form action="' . $this->redirect_uri . '" method="post">';
             echo wp_nonce_field($this->nonce_import . 'action', $this->nonce_import);
-            echo get_submit_button($this->__('Import now') , 'primary', $this->options['id'] . 'import-datas', false) . ' ';
-            echo get_submit_button($this->__('Test import') , 'secondary', $this->options['id'] . 'import-test', false);
+            echo get_submit_button($this->__('Import now'), 'primary', $this->options['id'] . 'import-datas', false) . ' ';
+            echo get_submit_button($this->__('Test import'), 'secondary', $this->options['id'] . 'import-test', false);
             if ($schedule !== false) {
-                echo get_submit_button($this->__('Disable automatic import') , 'primary', $this->options['id'] . 'disable-schedule');
-            }
-            else {
-                echo get_submit_button($this->__('Enable automatic import') , 'primary', $this->options['id'] . 'enable-schedule');
+                echo get_submit_button($this->__('Disable automatic import'), 'primary', $this->options['id'] . 'disable-schedule');
+            } else {
+                echo get_submit_button($this->__('Enable automatic import'), 'primary', $this->options['id'] . 'enable-schedule');
             }
             echo '</form>';
 
@@ -522,44 +532,44 @@ class wpu_display_instagram {
       Options for config
     ---------------------------------------------------------- */
 
-    function options_tabs($tabs) {
+    public function options_tabs($tabs) {
         $tabs['instagram_tab'] = array(
-            'name' => 'Plugin : Display Instagram',
+            'name' => 'Plugin : Import Instagram'
         );
         return $tabs;
     }
 
-    function options_boxes($boxes) {
+    public function options_boxes($boxes) {
         $boxes['instagram_config'] = array(
             'tab' => 'instagram_tab',
-            'name' => 'Display Instagram'
+            'name' => 'Import Instagram'
         );
         return $boxes;
     }
 
-    function options_fields($options) {
+    public function options_fields($options) {
         $options['wpu_get_instagram__user_name'] = array(
-            'label' => $this->__('User name') ,
+            'label' => $this->__('User name'),
             'box' => 'instagram_config'
         );
         $options['wpu_get_instagram__client_id'] = array(
-            'label' => $this->__('Client ID') ,
+            'label' => $this->__('Client ID'),
             'box' => 'instagram_config'
         );
         $options['wpu_get_instagram__client_secret'] = array(
-            'label' => $this->__('Client Secret') ,
+            'label' => $this->__('Client Secret'),
             'box' => 'instagram_config'
         );
         $options['wpu_get_instagram__client_token'] = array(
-            'label' => $this->__('Access token') ,
+            'label' => $this->__('Access token'),
             'box' => 'instagram_config'
         );
         $options['wpu_get_instagram__user_id'] = array(
-            'label' => $this->__('User ID') ,
+            'label' => $this->__('User ID'),
             'box' => 'instagram_config'
         );
         $options['wpu_get_instagram__import_as_draft'] = array(
-            'label' => $this->__('Import as draft') ,
+            'label' => $this->__('Import as draft'),
             'type' => 'select',
             'box' => 'instagram_config'
         );
@@ -579,7 +589,7 @@ class wpu_display_instagram {
 
     /* Set notices messages */
     private function set_message($id, $message, $group = '') {
-        $messages = (array)get_transient($this->transient_msg);
+        $messages = (array) get_transient($this->transient_msg);
         if (!in_array($group, $this->notices_categories)) {
             $group = $this->notices_categories[0];
         }
@@ -588,8 +598,8 @@ class wpu_display_instagram {
     }
 
     /* Display notices */
-    function admin_notices() {
-        $messages = (array)get_transient($this->transient_msg);
+    public function admin_notices() {
+        $messages = (array) get_transient($this->transient_msg);
         if (!empty($messages)) {
             foreach ($messages as $group_id => $group) {
                 if (is_array($group)) {
@@ -631,16 +641,16 @@ function wpu_display_instagram__activation() {
     $wpu_display_instagram = new wpu_display_instagram();
     $wpu_display_instagram->register_post_types();
     flush_rewrite_rules();
-    wp_schedule_event(time() , 'hourly', 'wpu_display_instagram__cron_hook');
+    wp_schedule_event(time(), 'hourly', 'wpu_display_instagram__cron_hook');
 }
 
 register_deactivation_hook(__FILE__, 'wpu_display_instagram__deactivation');
 function wpu_display_instagram__deactivation() {
     $wpu_display_instagram = new wpu_display_instagram();
     $wpu_display_instagram->register_post_types();
-    $timestamp = wp_next_scheduled( 'wpu_display_instagram__cron_hook' );
+    $timestamp = wp_next_scheduled('wpu_display_instagram__cron_hook');
     wp_clear_scheduled_hook('wpu_display_instagram__cron_hook');
-    wp_unschedule_event($timestamp , 'hourly', 'wpu_display_instagram__cron_hook');
+    wp_unschedule_event($timestamp, 'hourly', 'wpu_display_instagram__cron_hook');
     flush_rewrite_rules();
 }
 
@@ -661,26 +671,26 @@ function wpudisplayinstagram_register_widgets() {
 }
 
 class wpudisplayinstagram extends WP_Widget {
-    function __construct() {
-        parent::__construct(false, '[WPU] Display Instagram', array(
-            'description' => 'Display Instagram'
+    public function __construct() {
+        parent::__construct(false, '[WPU] Import Instagram', array(
+            'description' => 'Import Instagram'
         ));
     }
-    function form($instance) {
+    public function form($instance) {
         load_plugin_textdomain('wpudisplayinstagram', false, dirname(plugin_basename(__FILE__)) . '/lang/');
-        $nb_items = is_numeric($instance['nb_items']) ? $instance['nb_items'] : 1; ?>
+        $nb_items = is_numeric($instance['nb_items']) ? $instance['nb_items'] : 1;?>
         <p>
-        <label for="<?php echo $this->get_field_id('nb_items'); ?>"><?php _e('Number of pictures displayed:', 'wpudisplayinstagram'); ?></label>
+        <label for="<?php echo $this->get_field_id('nb_items'); ?>"><?php _e('Number of pictures displayed:', 'wpudisplayinstagram');?></label>
         <input class="widefat" id="<?php echo $this->get_field_id('nb_items'); ?>" name="<?php echo $this->get_field_name('nb_items'); ?>" type="text" value="<?php echo esc_attr($nb_items); ?>">
         </p>
         <?php
-    }
-    function update($new_instance, $old_instance) {
+}
+    public function update($new_instance, $old_instance) {
         return array(
             'nb_items' => is_numeric($new_instance['nb_items']) ? $new_instance['nb_items'] : 1
         );
     }
-    function widget($args, $instance) {
+    public function widget($args, $instance) {
         $nb_items = isset($instance['nb_items']) && is_numeric($instance['nb_items']) ? $instance['nb_items'] : 5;
         global $wpu_display_instagram;
         echo $args['before_widget'];
@@ -696,7 +706,7 @@ class wpudisplayinstagram extends WP_Widget {
             while ($wpq_instagram_posts->have_posts()) {
                 $wpq_instagram_posts->the_post();
                 echo '<li class="instagram-item">';
-                echo '<a class="instagram-link" target="_blank" href="' . get_post_meta(get_the_ID() , 'instagram_post_link', 1) . '">';
+                echo '<a class="instagram-link" target="_blank" href="' . get_post_meta(get_the_ID(), 'instagram_post_link', 1) . '">';
                 the_post_thumbnail();
                 echo '</a>';
                 echo '</li>';

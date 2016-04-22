@@ -1,7 +1,7 @@
-WPU Display Instagram
+WPU Import Instagram
 ======
 
-Displays the latest images for an Instagram account
+Import the latest instagram images
 
 How to install :
 ---
