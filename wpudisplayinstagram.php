@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Import Instagram
 Description: Import the latest instagram images
-Version: 0.12.4
+Version: 0.12.5
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -11,7 +11,7 @@ License URI: http://opensource.org/licenses/MIT
 */
 
 class wpu_display_instagram {
-    public $plugin_version = '0.12.4';
+    public $plugin_version = '0.12.5';
 
     private $notices_categories = array(
         'updated',
@@ -208,7 +208,7 @@ class wpu_display_instagram {
             $this->set_token();
         }
 
-        $nb_items = 10;
+        $nb_items = apply_filters('wpudisplayinstagram__nb_items', 10);
         $imported_items = $this->get_imported_items();
         $request_url = sprintf($this->request_url, $nb_items);
 
@@ -488,13 +488,17 @@ class wpu_display_instagram {
         }
 
         if ($_plugin_ok) {
+            $schedule = wp_get_schedule('wpu_display_instagram__cron_hook');
+            $next_scheduled = wp_next_scheduled('wpu_display_instagram__cron_hook');
             if (is_numeric($latestimport)) {
-                echo '<p>' . sprintf($this->__('Latest import : %s ago'), human_time_diff($latestimport)) . '.</p>';
+                echo '<p>' . sprintf($this->__('Latest import: %s ago'), human_time_diff($latestimport)) . '.</p>';
             } else {
                 echo '<p>' . $this->__('The plugin is configured !') . '</p>';
             }
+            if (is_numeric($next_scheduled)) {
+                echo '<p>' . sprintf($this->__('Next import: in %s'), human_time_diff($next_scheduled)) . '.</p>';
+            }
 
-            $schedule = wp_get_schedule('wpu_display_instagram__cron_hook');
             echo '<form action="' . $this->redirect_uri . '" method="post">';
             echo wp_nonce_field($this->nonce_import . 'action', $this->nonce_import);
             echo get_submit_button($this->__('Import now'), 'primary', $this->options['id'] . 'import-datas', false) . ' ';
@@ -626,6 +630,8 @@ class wpu_display_instagram {
         delete_post_meta_by_key('instagram_post_id');
         delete_post_meta_by_key('instagram_post_link');
         delete_post_meta_by_key('instagram_post_datas');
+        delete_post_meta_by_key('instagram_post_latitude');
+        delete_post_meta_by_key('instagram_post_longitude');
     }
 
 }
