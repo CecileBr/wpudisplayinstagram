@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: WPU Display Instagram\n"
-"POT-Creation-Date: 2016-04-30 18:17+0200\n"
+"POT-Creation-Date: 2016-05-01 12:10+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Darklg <darklg.blog@gmail.com>\n"
 "Language-Team: \n"
@@ -15,144 +15,166 @@ msgstr ""
 "X-Poedit-KeywordsList: __;_e\n"
 "X-Poedit-SearchPath-0: ../.\n"
 
-#: .././wpudisplayinstagram.php:112
-#, php-format
-msgid "The plugin %s should be installed."
-msgstr "Le plugin %s devrait être installé."
+#: .././inc/WPUBaseSettings.php:39
+msgid "Import Settings"
+msgstr "Réglages d'import"
 
-#: .././wpudisplayinstagram.php:185
+#: .././inc/WPUBaseSettings.php:140
+msgid "Settings saved."
+msgstr "Réglages enregistrés."
+
+#: .././wpudisplayinstagram.php:62 .././wpudisplayinstagram.php:439
+msgid "Import settings"
+msgstr "Réglages d'import"
+
+#: .././wpudisplayinstagram.php:65
+msgid "User details"
+msgstr "Détails de l'utilisateur"
+
+#: .././wpudisplayinstagram.php:73
+msgid "Client ID"
+msgstr "Client ID"
+
+#: .././wpudisplayinstagram.php:77
+msgid "Client Secret"
+msgstr "Client Secret"
+
+#: .././wpudisplayinstagram.php:81
+msgid "Access token"
+msgstr "Access token"
+
+#: .././wpudisplayinstagram.php:85
+msgid "User name"
+msgstr "Nom utilisateur"
+
+#: .././wpudisplayinstagram.php:89
+msgid "Import as draft"
+msgstr "Importer comme brouillon"
+
+#: .././wpudisplayinstagram.php:90
+msgid "Import image as a draft post"
+msgstr "Importer comme brouillon"
+
+#: .././wpudisplayinstagram.php:218
 msgid "The response from Instagram is invalid."
 msgstr "La réponse d'Instagram est invalide."
 
-#: .././wpudisplayinstagram.php:191
+#: .././wpudisplayinstagram.php:224
 msgid "The access token from Instagram could not be retrieved."
 msgstr "L'access token d'Instagram n'a pas être récupéré."
 
-#: .././wpudisplayinstagram.php:201
+#: .././wpudisplayinstagram.php:238
 msgid "The token have been successfully imported."
 msgstr "Le token a été importé avec succès."
 
-#: .././wpudisplayinstagram.php:219 .././wpudisplayinstagram.php:228
+#: .././wpudisplayinstagram.php:254 .././wpudisplayinstagram.php:261
 msgid "The datas sent by Instagram are invalid."
 msgstr "Les données renvoyées par Instagram sont invalides."
 
-#: .././wpudisplayinstagram.php:397 .././wpudisplayinstagram.php:407
+#: .././wpudisplayinstagram.php:448
 msgid "Settings"
 msgstr "Réglages"
 
-#: .././wpudisplayinstagram.php:418
+#: .././wpudisplayinstagram.php:459
 msgid "The API works great."
 msgstr "L'API fonctionne très bien."
 
-#: .././wpudisplayinstagram.php:418
+#: .././wpudisplayinstagram.php:459
 msgid "The API do not work."
 msgstr "L'API ne fonctionne pas."
 
-#: .././wpudisplayinstagram.php:421
-msgid "The automatic import has been enabled."
-msgstr "L'import automatique a été activé."
-
-#: .././wpudisplayinstagram.php:424
-msgid "The automatic import has been disabled."
-msgstr "L'import automatique a été désactivé."
-
-#: .././wpudisplayinstagram.php:455
+#: .././wpudisplayinstagram.php:490
 msgid "The import has failed."
 msgstr "L'import a échoué."
 
-#: .././wpudisplayinstagram.php:458
+#: .././wpudisplayinstagram.php:493
 #, php-format
 msgid "%s files have been imported."
 msgstr "%s fichiers ont été importés."
 
-#: .././wpudisplayinstagram.php:460
+#: .././wpudisplayinstagram.php:495
 #, php-format
 msgid "%s file have been imported."
 msgstr "%s fichier a été importé."
 
-#: .././wpudisplayinstagram.php:463
+#: .././wpudisplayinstagram.php:498
 msgid "No file have been imported."
 msgstr "Aucun fichier n'a été importé."
 
-#: .././wpudisplayinstagram.php:483
+#: .././wpudisplayinstagram.php:518
 #, php-format
 msgid ""
-"Please fill in <a href=\"%s\">Config details</a> or create a <a target="
-"\"_blank\" href=\"%s\">new Instagram app</a>"
+"Please fill in Config details or create a <a target=\"_blank\" href=\"%s"
+"\">new Instagram app</a>"
 msgstr ""
-"Merci de remplir les <a href=\"%s\">détails de configuration</a> ou de créer "
-"une <a target=\"_blank\" href=\"%s\">nouvelle application Instagram</a>"
+"Merci de remplir les détails de configuration ou de créer une <a target="
+"\"_blank\" href=\"%s\">nouvelle application Instagram</a>"
 
-#: .././wpudisplayinstagram.php:485
+#: .././wpudisplayinstagram.php:520
 #, php-format
 msgid "Please <a href=\"%s\">login here</a>"
 msgstr "Merci de <a href=\"%s\">vous connecter</a>"
 
-#: .././wpudisplayinstagram.php:487
+#: .././wpudisplayinstagram.php:522
 msgid "Request URI"
 msgstr "Request URI"
 
-#: .././wpudisplayinstagram.php:494
-#, php-format
-msgid "Latest import: %s ago"
-msgstr "Dernier import : il y a %s"
-
-#: .././wpudisplayinstagram.php:496
-msgid "The plugin is configured !"
-msgstr "Le plugin est configuré !"
-
-#: .././wpudisplayinstagram.php:499
+#: .././wpudisplayinstagram.php:528
 #, php-format
 msgid "Next import: in %s"
 msgstr "Prochain import : dans %s"
 
-#: .././wpudisplayinstagram.php:504
+#: .././wpudisplayinstagram.php:533
 msgid "Import now"
 msgstr "Importer maintenant"
 
-#: .././wpudisplayinstagram.php:505
+#: .././wpudisplayinstagram.php:534
 msgid "Test import"
 msgstr "Tester l'import"
 
-#: .././wpudisplayinstagram.php:507
-msgid "Disable automatic import"
-msgstr "Désactiver l'import automatique"
-
-#: .././wpudisplayinstagram.php:509
-msgid "Enable automatic import"
-msgstr "Activer l'import automatique"
-
-#: .././wpudisplayinstagram.php:523
+#: .././wpudisplayinstagram.php:547
 msgid "Latest imports"
 msgstr "Derniers imports"
 
-#: .././wpudisplayinstagram.php:556
-msgid "User name"
-msgstr "Nom utilisateur"
+#: .././wpudisplayinstagram.php:561
+msgid "Save Changes"
+msgstr "Enregistrer les modifications"
 
-#: .././wpudisplayinstagram.php:560
-msgid "Client ID"
-msgstr "Client ID"
-
-#: .././wpudisplayinstagram.php:564
-msgid "Client Secret"
-msgstr "Client Secret"
-
-#: .././wpudisplayinstagram.php:568
-msgid "Access token"
-msgstr "Access token"
-
-#: .././wpudisplayinstagram.php:572
-msgid "User ID"
-msgstr "ID Utilisateur"
-
-#: .././wpudisplayinstagram.php:576
-msgid "Import as draft"
-msgstr "Importer comme brouillon"
-
-#: .././wpudisplayinstagram.php:682
+#: .././wpudisplayinstagram.php:632
 msgid "Number of pictures displayed:"
 msgstr "Nombre d'images affichées :"
+
+#~ msgid "The plugin %s should be installed."
+#~ msgstr "Le plugin %s devrait être installé."
+
+#~ msgid "The automatic import has been enabled."
+#~ msgstr "L'import automatique a été activé."
+
+#~ msgid "The automatic import has been disabled."
+#~ msgstr "L'import automatique a été désactivé."
+
+#~ msgid ""
+#~ "Please fill in <a href=\"%s\">Config details</a> or create a <a target="
+#~ "\"_blank\" href=\"%s\">new Instagram app</a>"
+#~ msgstr ""
+#~ "Merci de remplir les <a href=\"%s\">détails de configuration</a> ou de "
+#~ "créer une <a target=\"_blank\" href=\"%s\">nouvelle application "
+#~ "Instagram</a>"
+
+#~ msgid "Latest import: %s ago"
+#~ msgstr "Dernier import : il y a %s"
+
+#~ msgid "The plugin is configured !"
+#~ msgstr "Le plugin est configuré !"
+
+#~ msgid "Disable automatic import"
+#~ msgstr "Désactiver l'import automatique"
+
+#~ msgid "Enable automatic import"
+#~ msgstr "Activer l'import automatique"
+
+#~ msgid "User ID"
+#~ msgstr "ID Utilisateur"
 
 #~ msgid "Latest import : %s ago"
 #~ msgstr "Dernier import: il y a %s"
