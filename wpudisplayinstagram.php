@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Import Instagram
 Description: Import the latest instagram images
-Version: 0.14
+Version: 0.15
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -16,7 +16,7 @@ class wpu_display_instagram {
     public $messages = false;
     public $basecron = false;
 
-    public $plugin_version = '0.14';
+    public $plugin_version = '0.15';
 
     public function __construct() {
         $this->options = array(
@@ -38,7 +38,7 @@ class wpu_display_instagram {
         add_action('admin_init', array(&$this,
             'set_token'
         ));
-        add_action('admin_init', array(&$this,
+        add_action('admin_post_' . $this->options['plugin_id'], array(&$this,
             'admin_postAction'
         ));
         add_action('admin_menu', array(&$this,
@@ -51,6 +51,22 @@ class wpu_display_instagram {
             'cron_action'
         ));
 
+        // Listing
+        add_filter('manage_edit-instagram_posts_columns', array(&$this,
+            'posts_columns'
+        ));
+        add_action('manage_instagram_posts_posts_custom_column', array(&$this,
+            'posts_column_content'
+        ), 10, 2);
+        add_filter('manage_edit-instagram_posts_sortable_columns', array(&$this,
+            'sortable_posts_column'
+        ));
+        add_action('pre_get_posts', array(&$this,
+            'posts_columns_orderby'
+        ));
+        add_filter('parse_query', array(&$this,
+            'filter_admin_results'
+        ));
         load_plugin_textdomain('wpudisplayinstagram', false, dirname(plugin_basename(__FILE__)) . '/lang/');
 
         // Settings
@@ -80,9 +96,11 @@ class wpu_display_instagram {
                 'section' => 'import',
                 'label' => __('Access token', 'wpudisplayinstagram')
             ),
-            'user_name' => array(
+            'user_names' => array(
                 'section' => 'user',
-                'label' => __('User name', 'wpudisplayinstagram')
+                'type' => 'textarea',
+                'label' => __('Usernames', 'wpudisplayinstagram'),
+                'help' => __('One user name by line', 'wpudisplayinstagram')
             ),
             'import_as_draft' => array(
                 'section' => 'user',
@@ -138,12 +156,8 @@ class wpu_display_instagram {
         $this->client_id = isset($this->options_values['client_id']) ? trim($this->options_values['client_id']) : '';
         $this->client_secret = isset($this->options_values['client_secret']) ? trim($this->options_values['client_secret']) : '';
         $this->user_name = isset($this->options_values['user_name']) ? trim($this->options_values['user_name']) : '';
+        $this->user_names = isset($this->options_values['user_names']) ? trim($this->options_values['user_names']) : '';
         $this->import_as_draft = isset($this->options_values['import_as_draft']) ? trim($this->options_values['import_as_draft']) : false;
-
-        // Settings
-        $this->option_user_id = 'wpu_get_instagram__user_id__' . $this->user_name;
-        $this->user_id = $this->get_user_id();
-        $this->request_url = 'https://api.instagram.com/v1/users/' . $this->user_id . '/media/recent/?count=%s&access_token=' . $this->client_token;
 
         // Admin URL
         $this->admin_uri = 'edit.php?post_type=' . $this->options['post_type'];
@@ -155,25 +169,50 @@ class wpu_display_instagram {
       API
     ---------------------------------------------------------- */
 
-    public function get_user_id() {
+    public function get_user_names() {
+        $user_names = array();
+        $_baseUserNames = str_replace(array(',', ';', ' '), "\n", $this->user_names);
+        $_baseUserNames = explode("\n", $_baseUserNames);
+        foreach ($_baseUserNames as $user_name) {
+            $user_name = trim(esc_html($user_name));
+            if (!empty($user_name)) {
+                $user_id = $this->get_user_id($user_name);
+                $request_url = $this->get_request_url($user_id);
+                $user_names[] = array(
+                    'user_name' => $user_name,
+                    'user_id' => $user_id,
+                    'request_url' => $request_url
+                );
+            }
+        }
+        return $user_names;
+    }
+
+    public function get_request_url($user_id) {
+        return 'https://api.instagram.com/v1/users/' . $user_id . '/media/recent/?count=%s&access_token=' . $this->client_token;
+    }
+
+    public function get_user_id($user_name) {
+        $this->option_user_id = 'wpu_get_instagram__user_id__' . $user_name;
+        $_user_id = false;
 
         /* Get from DB */
         if (!property_exists($this, 'user_id')) {
-            $this->user_id = trim(get_option($this->option_user_id));
+            $_user_id = trim(get_option($this->option_user_id));
         }
 
         /* Test if valid */
-        if (is_numeric($this->user_id)) {
-            return $this->user_id;
+        if (is_numeric($_user_id)) {
+            return $_user_id;
         }
 
         /* Try to get username */
-        if (empty($this->user_name) || !preg_match("/[A-Za-z0-9_]+/i", $this->user_name)) {
+        if (empty($user_name) || !preg_match("/[A-Za-z0-9_]+/i", $user_name)) {
             return false;
         }
 
         /* Try to get user id from API */
-        $_url = "https://api.instagram.com/v1/users/search?q=" . $this->user_name . "&access_token=" . $this->client_token;
+        $_url = "https://api.instagram.com/v1/users/search?q=" . $user_name . "&access_token=" . $this->client_token;
         $_request = wp_remote_get($_url);
         if (!is_array($_request) || !isset($_request['body'])) {
             return false;
@@ -183,13 +222,13 @@ class wpu_display_instagram {
             return false;
         }
 
-        $base_username = strtolower($this->user_name);
+        $base_username = strtolower($user_name);
         foreach ($json->data as $_user) {
             $tmp_username = strtolower($_user->username);
             if ($tmp_username == $base_username) {
-                $this->user_id = $_user->id;
-                update_option($this->option_user_id, $this->user_id);
-                return $this->user_id;
+                $_user_id = $_user->id;
+                update_option($this->option_user_id, $_user_id);
+                return $_user_id;
             }
         }
         return false;
@@ -225,15 +264,11 @@ class wpu_display_instagram {
             return;
         }
 
-        $this->user_id = $response->user->id;
         $this->client_token = $response->access_token;
 
         // Update options
         $this->options_values['client_token'] = $this->client_token;
         update_option($this->settings_details['option_id'], $this->options_values);
-
-        // Save user id
-        update_option($this->option_user_id, $this->user_id);
 
         $this->messages->set_message('token_success', __('The token have been successfully imported.', 'wpudisplayinstagram'), 'updated');
         wp_redirect($this->redirect_uri);
@@ -245,21 +280,42 @@ class wpu_display_instagram {
             $this->set_token();
         }
 
-        $nb_items = apply_filters('wpudisplayinstagram__nb_items', 10);
         $imported_items = $this->get_imported_items();
-        $request_url = sprintf($this->request_url, $nb_items);
+        $user_names = $this->get_user_names();
+        $nb_items = 10;
+        if (count($user_names) > 1) {
+            $nb_items = 5;
+        }
+        $nb_items = apply_filters('wpudisplayinstagram__nb_items', $nb_items);
+
+        if (empty($user_names)) {
+            return 0;
+        }
+
+        $total_count = 0;
+        foreach ($user_names as $user_name) {
+            $total_count += $this->import_for_user($user_name, $imported_items, $nb_items);
+        }
+
+        return $total_count;
+
+    }
+
+    public function import_for_user($user_name, $imported_items, $nb_items) {
+        $request_url = sprintf($user_name['request_url'], $nb_items);
+
         // Send request
         $request = wp_remote_get($request_url);
         if (!is_array($request) || !isset($request['body'])) {
             $this->messages->set_message('no_array_insta', __('The datas sent by Instagram are invalid.', 'wpudisplayinstagram'), 'error');
-            return;
+            return 0;
         }
 
         // Extract and return informations
         $imginsta = json_decode($request['body']);
         if (!is_object($imginsta) || !is_array($imginsta->data)) {
             $this->messages->set_message('no_array_insta', __('The datas sent by Instagram are invalid.', 'wpudisplayinstagram'), 'error');
-            return;
+            return 0;
         }
 
         // Import each post if not in database
@@ -268,10 +324,11 @@ class wpu_display_instagram {
             $datas = $this->get_datas_from_item($item);
             if (!in_array($datas['id'], $imported_items)) {
                 $count++;
-                $this->import_item($datas);
+                $imported_items[] = $this->import_item($datas);
             }
         }
         return $count;
+
     }
 
     /* ----------------------------------------------------------
@@ -342,6 +399,8 @@ class wpu_display_instagram {
         if (sizeof($attachments) > 0) {
             set_post_thumbnail($post_id, $attachments[0]->ID);
         }
+
+        return $datas['id'];
     }
 
     public function get_imported_items() {
@@ -353,8 +412,8 @@ class wpu_display_instagram {
     public function get_datas_from_item($details) {
         $datas = array(
             'image' => '',
-            'username' => $this->user_name,
-            'full_name' => $this->user_name,
+            'username' => '',
+            'full_name' => '',
             'link' => '#',
             'created_time' => '0',
             'caption' => '',
@@ -464,10 +523,20 @@ class wpu_display_instagram {
     }
 
     private function admin_postAction_importTest() {
+        $user_names = $this->get_user_names();
+
+        if (empty($user_names)) {
+            return false;
+        }
+
+        foreach ($user_names as $user) {
+            $request_url = $user['request_url'];
+            break;
+        }
 
         $_nb_items_test = 1;
 
-        $_request = wp_remote_get(sprintf($this->request_url, $_nb_items_test));
+        $_request = wp_remote_get(sprintf($request_url, $_nb_items_test));
         if (!is_array($_request) || !isset($_request['body'])) {
             return false;
         }
@@ -528,7 +597,8 @@ class wpu_display_instagram {
                 echo '<p>' . sprintf(__('Next import: in %s', 'wpudisplayinstagram'), human_time_diff($next_scheduled)) . '.</p>';
             }
 
-            echo '<form action="' . $this->redirect_uri . '" method="post">';
+            echo '<form action="' . admin_url('admin-post.php') . '" method="post">';
+            echo '<input type="hidden" name="action" value="' . $this->options['plugin_id'] . '" />';
             echo wp_nonce_field($this->nonce_import . 'action', $this->nonce_import);
             echo get_submit_button(__('Import now', 'wpudisplayinstagram'), 'primary', $this->options['id'] . 'import-datas', false) . ' ';
             echo get_submit_button(__('Test import', 'wpudisplayinstagram'), 'secondary', $this->options['id'] . 'import-test', false);
@@ -562,6 +632,60 @@ class wpu_display_instagram {
         echo '</form>';
 
         echo '</div>';
+    }
+
+    /* ----------------------------------------------------------
+      Listing
+    ---------------------------------------------------------- */
+
+    public function posts_columns($columns) {
+        $columns['instagram_post_username'] = __('Author', 'myplugindomain');
+        return $columns;
+    }
+
+    public function posts_column_content($column_name, $post_id) {
+        if ('instagram_post_username' != $column_name) {
+            return;
+        }
+
+        $fullname = get_post_meta($post_id, 'instagram_post_full_name', true);
+        $username = get_post_meta($post_id, 'instagram_post_username', true);
+        $external_url = 'https://instagram.com/'.$username;
+        $url = admin_url('edit.php?post_type=' . $this->options['post_type'] . '&instagram_post_username=' . esc_attr($username));
+
+
+        echo sprintf('<strong>%s <a href="%s" target="_blank"><span style="font-size:1em;vertical-align:middle;" class="dashicons dashicons-format-image"></span></a></strong><br />(<a href="%s">%s</a>)', $fullname, $external_url,  $url, $username);
+    }
+
+    public function sortable_posts_column($columns) {
+        $columns['instagram_post_username'] = 'instagram_post_username';
+        return $columns;
+    }
+
+    public function posts_columns_orderby($query) {
+        if (!is_admin()) {
+            return;
+        }
+
+        // Order by
+        $orderby = $query->get('orderby');
+        if ('instagram_post_username' == $orderby) {
+            $query->set('meta_key', 'instagram_post_username');
+            $query->set('orderby', 'meta_value');
+        }
+
+    }
+
+    public function filter_admin_results($query) {
+        global $pagenow;
+        $type = 'post';
+        if (isset($_GET['post_type'])) {
+            $type = $_GET['post_type'];
+        }
+        if ( $this->options['post_type'] == $type && is_admin() && $pagenow == 'edit.php' && isset($_GET['instagram_post_username']) && $_GET['instagram_post_username'] != '') {
+            $query->query_vars['meta_key'] = 'instagram_post_username';
+            $query->query_vars['meta_value'] = $_GET['instagram_post_username'];
+        }
     }
 
     /* ----------------------------------------------------------
