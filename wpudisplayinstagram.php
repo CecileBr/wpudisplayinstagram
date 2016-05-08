@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Import Instagram
 Description: Import the latest instagram images
-Version: 0.15
+Version: 0.15.1
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -16,7 +16,7 @@ class wpu_display_instagram {
     public $messages = false;
     public $basecron = false;
 
-    public $plugin_version = '0.15';
+    public $plugin_version = '0.15.1';
 
     public function __construct() {
         $this->options = array(
@@ -67,6 +67,12 @@ class wpu_display_instagram {
         add_filter('parse_query', array(&$this,
             'filter_admin_results'
         ));
+
+        // Single
+        add_action('add_meta_boxes', array(&$this,
+            'add_meta_boxes'
+        ));
+
         load_plugin_textdomain('wpudisplayinstagram', false, dirname(plugin_basename(__FILE__)) . '/lang/');
 
         // Settings
@@ -615,8 +621,11 @@ class wpu_display_instagram {
 
             if (!empty($wpq_instagram_posts)) {
                 echo '<br /><hr/><h3>' . __('Latest imports', 'wpudisplayinstagram') . '</h3><ul>';
-                foreach ($wpq_instagram_posts as $id) {
-                    echo '<li style="float:left"><a href="' . get_edit_post_link($id) . '">' . get_the_post_thumbnail($id, 'thumbnail') . '</a></li>';
+                foreach ($wpq_instagram_posts as $post_id) {
+                    echo '<li style="float:left">';
+                    echo '<a href="' . get_edit_post_link($post_id) . '">' . get_the_post_thumbnail($post_id, 'thumbnail') . '</a><br />';
+                    echo $this->display_author($post_id);
+                    echo '</li>';
                 }
                 echo '</ul><div style="clear: both;"></div>';
             }
@@ -639,22 +648,26 @@ class wpu_display_instagram {
     ---------------------------------------------------------- */
 
     public function posts_columns($columns) {
-        $columns['instagram_post_username'] = __('Author', 'myplugindomain');
+        $columns['instagram_post_username'] = __('Author', 'wpudisplayinstagram');
         return $columns;
+    }
+
+    public function display_author($post_id) {
+        $fullname = get_post_meta($post_id, 'instagram_post_full_name', true);
+        $username = get_post_meta($post_id, 'instagram_post_username', true);
+        if (empty($fullname) || empty($username)) {
+            return '';
+        }
+        $external_url = 'https://instagram.com/' . $username;
+        $url = admin_url('edit.php?post_type=' . $this->options['post_type'] . '&instagram_post_username=' . esc_attr($username));
+        return sprintf('<strong><a href="%s" target="_blank"><span style="font-size:1em;vertical-align:middle;" class="dashicons dashicons-format-image"></span></a> %s</strong><br />&rarr; <a href="%s">%s</a>', $external_url, $fullname, $url, $username);
     }
 
     public function posts_column_content($column_name, $post_id) {
         if ('instagram_post_username' != $column_name) {
             return;
         }
-
-        $fullname = get_post_meta($post_id, 'instagram_post_full_name', true);
-        $username = get_post_meta($post_id, 'instagram_post_username', true);
-        $external_url = 'https://instagram.com/'.$username;
-        $url = admin_url('edit.php?post_type=' . $this->options['post_type'] . '&instagram_post_username=' . esc_attr($username));
-
-
-        echo sprintf('<strong>%s <a href="%s" target="_blank"><span style="font-size:1em;vertical-align:middle;" class="dashicons dashicons-format-image"></span></a></strong><br />(<a href="%s">%s</a>)', $fullname, $external_url,  $url, $username);
+        echo $this->display_author($post_id);
     }
 
     public function sortable_posts_column($columns) {
@@ -682,9 +695,23 @@ class wpu_display_instagram {
         if (isset($_GET['post_type'])) {
             $type = $_GET['post_type'];
         }
-        if ( $this->options['post_type'] == $type && is_admin() && $pagenow == 'edit.php' && isset($_GET['instagram_post_username']) && $_GET['instagram_post_username'] != '') {
+        if ($this->options['post_type'] == $type && is_admin() && $pagenow == 'edit.php' && isset($_GET['instagram_post_username']) && $_GET['instagram_post_username'] != '') {
             $query->query_vars['meta_key'] = 'instagram_post_username';
             $query->query_vars['meta_value'] = $_GET['instagram_post_username'];
+        }
+    }
+
+    /* ----------------------------------------------------------
+      Single
+    ---------------------------------------------------------- */
+
+    public function add_meta_boxes() {
+        add_meta_box('wpu_display_instagram-author', __('Author', 'wpudisplayinstagram'), array(&$this, 'meta_box_callback_author'), $this->options['post_type'], 'side');
+    }
+
+    public function meta_box_callback_author($post) {
+        if (is_object($post)) {
+            echo $this->display_author($post->ID);
         }
     }
 
