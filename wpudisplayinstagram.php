@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Import Instagram
 Description: Import the latest instagram images
-Version: 0.15.1
+Version: 0.15.2
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -16,7 +16,7 @@ class wpu_display_instagram {
     public $messages = false;
     public $basecron = false;
 
-    public $plugin_version = '0.15.1';
+    public $plugin_version = '0.15.2';
 
     public function __construct() {
         $this->options = array(
@@ -143,9 +143,10 @@ class wpu_display_instagram {
             'cronhook' => 'wpu_display_instagram__cron_hook',
             'croninterval' => 3600
         ));
+        $this->basesettings = false;
         if (is_admin()) {
             include 'inc/WPUBaseSettings.php';
-            new \wpudisplayinstagram\WPUBaseSettings($this->settings_details, $this->settings);
+            $this->basesettings = new \wpudisplayinstagram\WPUBaseSettings($this->settings_details, $this->settings);
         }
 
     }
@@ -273,8 +274,7 @@ class wpu_display_instagram {
         $this->client_token = $response->access_token;
 
         // Update options
-        $this->options_values['client_token'] = $this->client_token;
-        update_option($this->settings_details['option_id'], $this->options_values);
+        $this->basesettings->update_setting('client_token', $this->client_token);
 
         $this->messages->set_message('token_success', __('The token have been successfully imported.', 'wpudisplayinstagram'), 'updated');
         wp_redirect($this->redirect_uri);
@@ -358,8 +358,7 @@ class wpu_display_instagram {
         );
 
         // Import as draft
-        $import_as_draft = $this->options_values['import_as_draft'];
-        if ($import_as_draft) {
+        if ($this->import_as_draft) {
             $post_details['post_status'] = 'draft';
         }
 
