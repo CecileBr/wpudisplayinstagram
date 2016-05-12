@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Import Instagram
 Description: Import the latest instagram images
-Version: 0.15.2
+Version: 0.16
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -15,8 +15,10 @@ class wpu_display_instagram {
     public $options = array();
     public $messages = false;
     public $basecron = false;
+    public $register_link = 'https://instagram.com/developer/clients/register/';
+    public $option_user_ids_opt = 'wpu_get_instagram__user_ids_opt';
 
-    public $plugin_version = '0.15.2';
+    public $plugin_version = '0.16';
 
     public function __construct() {
         $this->options = array(
@@ -145,7 +147,7 @@ class wpu_display_instagram {
         ));
         $this->basesettings = false;
         if (is_admin()) {
-            include 'inc/WPUBaseSettings.php';
+            include_once 'inc/WPUBaseSettings.php';
             $this->basesettings = new \wpudisplayinstagram\WPUBaseSettings($this->settings_details, $this->settings);
         }
 
@@ -195,17 +197,28 @@ class wpu_display_instagram {
         return $user_names;
     }
 
-    public function get_request_url($user_id) {
+    public function get_request_url($user_id = 1) {
         return 'https://api.instagram.com/v1/users/' . $user_id . '/media/recent/?count=%s&access_token=' . $this->client_token;
     }
 
-    public function get_user_id($user_name) {
-        $this->option_user_id = 'wpu_get_instagram__user_id__' . $user_name;
+    public function get_user_id($user_name = '') {
+        $_option_user_id = 'wpu_get_instagram__user_id__' . $user_name;
         $_user_id = false;
+
+        /* Set master user ids function */
+        $opt_user_id = get_option($this->option_user_ids_opt);
+        if (!is_array($opt_user_id)) {
+            $opt_user_id = array();
+        }
+
+        if (!in_array($_option_user_id, $opt_user_id)) {
+            $opt_user_id[] = $_option_user_id;
+            update_option($this->option_user_ids_opt, $opt_user_id);
+        }
 
         /* Get from DB */
         if (!property_exists($this, 'user_id')) {
-            $_user_id = trim(get_option($this->option_user_id));
+            $_user_id = trim(get_option($_option_user_id));
         }
 
         /* Test if valid */
@@ -234,7 +247,7 @@ class wpu_display_instagram {
             $tmp_username = strtolower($_user->username);
             if ($tmp_username == $base_username) {
                 $_user_id = $_user->id;
-                update_option($this->option_user_id, $_user_id);
+                update_option($_option_user_id, $_user_id);
                 return $_user_id;
             }
         }
@@ -307,7 +320,7 @@ class wpu_display_instagram {
 
     }
 
-    public function import_for_user($user_name, $imported_items, $nb_items) {
+    public function import_for_user($user_name = '', $imported_items = array(), $nb_items = 1) {
         $request_url = sprintf($user_name['request_url'], $nb_items);
 
         // Send request
@@ -508,7 +521,7 @@ class wpu_display_instagram {
     /**
      * Settings link
      */
-    public function settings_link($links) {
+    public function settings_link($links = array()) {
         $settings_link = '<a href="' . $this->redirect_uri . '">' . __('Settings', 'wpudisplayinstagram') . '</a>';
         array_unshift($links, $settings_link);
         return $links;
@@ -578,7 +591,6 @@ class wpu_display_instagram {
 
     public function admin_page() {
         $_plugin_ok = true;
-        $register_link = 'https://instagram.com/developer/clients/register/';
         $api_link = 'https://api.instagram.com/oauth/authorize/?client_id=' . $this->client_id . '&redirect_uri=' . urlencode($this->redirect_uri) . '&response_type=code';
         $latestimport = get_option('wpudisplayinstagram_latestimport');
 
@@ -586,10 +598,15 @@ class wpu_display_instagram {
         echo '<h1>' . get_admin_page_title() . '</h1>';
         settings_errors($this->settings_details['option_id']);
 
+        if (defined('WP_HTTP_BLOCK_EXTERNAL') && WP_HTTP_BLOCK_EXTERNAL) {
+            $_plugin_ok = false;
+            echo '<div class="notice error"><p>' . __('The WordPress external requests are disabled.', 'wpudisplayinstagram') . '</p></div>';
+        }
+
         if (empty($this->client_token)) {
             $_plugin_ok = false;
             if (empty($this->client_id) || empty($this->client_secret) || empty($this->redirect_uri)) {
-                echo '<p>' . sprintf(__('Please fill in Config details or create a <a target="_blank" href="%s">new Instagram app</a>', 'wpudisplayinstagram'), $register_link) . '</p>';
+                echo '<p>' . sprintf(__('Please fill in Config details or create a <a target="_blank" href="%s">new Instagram app</a>', 'wpudisplayinstagram'), $this->register_link) . '</p>';
             } else {
                 echo '<p>' . sprintf(__('Please <a href="%s">login here</a>', 'wpudisplayinstagram'), $api_link) . '.</p>';
             }
@@ -646,12 +663,12 @@ class wpu_display_instagram {
       Listing
     ---------------------------------------------------------- */
 
-    public function posts_columns($columns) {
+    public function posts_columns($columns = array()) {
         $columns['instagram_post_username'] = __('Author', 'wpudisplayinstagram');
         return $columns;
     }
 
-    public function display_author($post_id) {
+    public function display_author($post_id = 1) {
         $fullname = get_post_meta($post_id, 'instagram_post_full_name', true);
         $username = get_post_meta($post_id, 'instagram_post_username', true);
         if (empty($fullname) || empty($username)) {
@@ -659,17 +676,17 @@ class wpu_display_instagram {
         }
         $external_url = 'https://instagram.com/' . $username;
         $url = admin_url('edit.php?post_type=' . $this->options['post_type'] . '&instagram_post_username=' . esc_attr($username));
-        return sprintf('<strong><a href="%s" target="_blank"><span style="font-size:1em;vertical-align:middle;" class="dashicons dashicons-format-image"></span></a> %s</strong><br />&rarr; <a href="%s">%s</a>', $external_url, $fullname, $url, $username);
+        return sprintf('<strong><a href="%s" target="_blank"><span style="text-decoration:none;font-size:1em;vertical-align:middle;" class="dashicons dashicons-format-image"></span></a> %s</strong><br />&rarr; <a href="%s">%s</a>', $external_url, $fullname, $url, $username);
     }
 
-    public function posts_column_content($column_name, $post_id) {
+    public function posts_column_content($column_name = '', $post_id = 1) {
         if ('instagram_post_username' != $column_name) {
             return;
         }
         echo $this->display_author($post_id);
     }
 
-    public function sortable_posts_column($columns) {
+    public function sortable_posts_column($columns = array()) {
         $columns['instagram_post_username'] = 'instagram_post_username';
         return $columns;
     }
@@ -731,7 +748,13 @@ class wpu_display_instagram {
         $this->basecron->uninstall();
 
         // Delete options
-        delete_option('wpu_get_instagram__client_id');
+        $options_users = get_option($this->option_user_ids_opt);
+        if (is_array($options_users)) {
+            foreach ($options_users as $option_user_id) {
+                delete_option($option_user_id);
+            }
+        }
+        delete_option($this->option_user_ids_opt);
         delete_option('wpu_get_instagram__client_secret');
         delete_option('wpu_get_instagram__client_token');
         delete_option('wpu_get_instagram__user_id');
@@ -789,10 +812,10 @@ class wpudisplayinstagram extends WP_Widget {
             'nb_items' => is_numeric($new_instance['nb_items']) ? $new_instance['nb_items'] : 1
         );
     }
-    public function widget($args, $instance) {
+    public function widget($widget_args = array(), $instance = array()) {
         $nb_items = isset($instance['nb_items']) && is_numeric($instance['nb_items']) ? $instance['nb_items'] : 5;
         global $wpu_display_instagram;
-        echo $args['before_widget'];
+        echo $widget_args['before_widget'];
         $wpq_instagram_posts = new WP_Query(array(
             'posts_per_page' => $nb_items,
             'post_type' => $wpu_display_instagram->options['post_type'],
@@ -814,6 +837,6 @@ class wpudisplayinstagram extends WP_Widget {
         }
         wp_reset_postdata();
 
-        echo $args['after_widget'];
+        echo $widget_args['after_widget'];
     }
 }
