@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Import Instagram
 Description: Import the latest instagram images
-Version: 0.16
+Version: 0.16.1
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -18,7 +18,7 @@ class wpu_display_instagram {
     public $register_link = 'https://instagram.com/developer/clients/register/';
     public $option_user_ids_opt = 'wpu_get_instagram__user_ids_opt';
 
-    public $plugin_version = '0.16';
+    public $plugin_version = '0.16.1';
 
     public function __construct() {
         $this->options = array(
@@ -332,7 +332,7 @@ class wpu_display_instagram {
 
         // Extract and return informations
         $imginsta = json_decode($request['body']);
-        if (!is_object($imginsta) || !is_array($imginsta->data)) {
+        if (!is_object($imginsta) || !property_exists($imginsta, 'data') || !is_array($imginsta->data)) {
             $this->messages->set_message('no_array_insta', __('The datas sent by Instagram are invalid.', 'wpudisplayinstagram'), 'error');
             return 0;
         }
@@ -498,7 +498,10 @@ class wpu_display_instagram {
     public function register_post_types() {
         register_post_type($this->options['post_type'], apply_filters('wpudisplayinstagram__post_type_infos', array(
             'public' => true,
-            'label' => 'Instagram posts',
+            'label' => __('Instagram posts', 'wpudisplayinstagram'),
+            'labels' => array(
+                'singular_name' => __('Instagram post', 'wpudisplayinstagram')
+            ),
             'menu_icon' => 'dashicons-format-image',
             'supports' => array(
                 'title',
