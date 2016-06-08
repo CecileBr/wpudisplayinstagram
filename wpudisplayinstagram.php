@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Import Instagram
 Description: Import the latest instagram images
-Version: 0.16.1
+Version: 0.17
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -18,7 +18,7 @@ class wpu_display_instagram {
     public $register_link = 'https://instagram.com/developer/clients/register/';
     public $option_user_ids_opt = 'wpu_get_instagram__user_ids_opt';
 
-    public $plugin_version = '0.16.1';
+    public $plugin_version = '0.17';
 
     public function __construct() {
         $this->options = array(
@@ -197,7 +197,17 @@ class wpu_display_instagram {
         return $user_names;
     }
 
-    public function get_request_url($user_id = 1) {
+    public function get_request_url($user_id = false) {
+
+        if (!$user_id || !is_numeric($user_id)) {
+            $token_parts = explode('.', $this->client_token);
+            if (is_numeric($token_parts[0])) {
+                $user_id = $token_parts[0];
+            } else {
+                return false;
+            }
+        }
+
         return 'https://api.instagram.com/v1/users/' . $user_id . '/media/recent/?count=%s&access_token=' . $this->client_token;
     }
 
@@ -234,10 +244,10 @@ class wpu_display_instagram {
         /* Try to get user id from API */
         $_url = "https://api.instagram.com/v1/users/search?q=" . $user_name . "&access_token=" . $this->client_token;
         $_request = wp_remote_get($_url);
-        if (!is_array($_request) || !isset($_request['body'])) {
+        if (is_wp_error($_request)) {
             return false;
         }
-        $json = json_decode($_request['body']);
+        $json = json_decode(wp_remote_retrieve_body($_request));
         if (!is_object($json) || !is_array($json->data) || !isset($json->data[0])) {
             return false;
         }
@@ -273,11 +283,11 @@ class wpu_display_instagram {
 
         $token = '';
         $response = '{}';
-        if (!isset($result['body'])) {
+        if (is_wp_error($result)) {
             $this->messages->set_message('token_no_body', __('The response from Instagram is invalid.', 'wpudisplayinstagram'), 'error');
             return;
         }
-        $response = json_decode($result['body']);
+        $response = json_decode(wp_remote_retrieve_body($result));
 
         if (!isset($response->access_token)) {
             $this->messages->set_message('token_no_token', __('The access token from Instagram could not be retrieved.', 'wpudisplayinstagram'), 'error');
@@ -325,13 +335,13 @@ class wpu_display_instagram {
 
         // Send request
         $request = wp_remote_get($request_url);
-        if (!is_array($request) || !isset($request['body'])) {
+        if (is_wp_error($request)) {
             $this->messages->set_message('no_array_insta', __('The datas sent by Instagram are invalid.', 'wpudisplayinstagram'), 'error');
             return 0;
         }
 
         // Extract and return informations
-        $imginsta = json_decode($request['body']);
+        $imginsta = json_decode(wp_remote_retrieve_body($request));
         if (!is_object($imginsta) || !property_exists($imginsta, 'data') || !is_array($imginsta->data)) {
             $this->messages->set_message('no_array_insta', __('The datas sent by Instagram are invalid.', 'wpudisplayinstagram'), 'error');
             return 0;
@@ -544,30 +554,19 @@ class wpu_display_instagram {
     }
 
     private function admin_postAction_importTest() {
-        $user_names = $this->get_user_names();
-
-        if (empty($user_names)) {
+        $_nb_items_test = 1;
+        $request_url = $this->get_request_url();
+        if (!$request_url) {
             return false;
         }
-
-        foreach ($user_names as $user) {
-            $request_url = $user['request_url'];
-            break;
-        }
-
-        $_nb_items_test = 1;
 
         $_request = wp_remote_get(sprintf($request_url, $_nb_items_test));
-        if (!is_array($_request) || !isset($_request['body'])) {
+        if (is_wp_error($_request)) {
             return false;
         }
 
-        $_json = json_decode($_request['body']);
-        if (!is_object($_json)) {
-            return false;
-        }
-
-        if (count($_json->data) != $_nb_items_test) {
+        $_json = json_decode(wp_remote_retrieve_body($_request));
+        if (!is_object($_json) || count($_json->data) != $_nb_items_test) {
             return false;
         }
 
