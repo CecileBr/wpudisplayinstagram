@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Import Instagram
 Description: Import the latest instagram images
-Version: 0.17
+Version: 0.18
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -11,6 +11,8 @@ License URI: http://opensource.org/licenses/MIT
 */
 
 class wpu_display_instagram {
+
+    public $test_user_id = 25025320;
 
     public $options = array();
     public $messages = false;
@@ -168,9 +170,17 @@ class wpu_display_instagram {
         $this->user_names = isset($this->options_values['user_names']) ? trim($this->options_values['user_names']) : '';
         $this->import_as_draft = isset($this->options_values['import_as_draft']) ? trim($this->options_values['import_as_draft']) : false;
 
+        $opt_sandboxmode = get_option('wpu_get_instagram__sandboxmode');
+        $this->sandboxmode = ($opt_sandboxmode != '0') ? '1' : '0';
+        if (is_null($opt_sandboxmode) || $opt_sandboxmode === false) {
+            $this->test_sandbox_mode();
+        }
+
         // Admin URL
         $this->admin_uri = 'edit.php?post_type=' . $this->options['post_type'];
         $this->redirect_uri = admin_url($this->admin_uri . '&page=' . $this->options['id']);
+
+        $this->config_ok = !empty($this->client_id) && !empty($this->client_secret);
 
     }
 
@@ -296,6 +306,8 @@ class wpu_display_instagram {
 
         $this->client_token = $response->access_token;
 
+        $this->test_sandbox_mode();
+
         // Update options
         $this->basesettings->update_setting('client_token', $this->client_token);
 
@@ -305,8 +317,12 @@ class wpu_display_instagram {
     }
 
     public function import() {
-        if (empty($this->client_id)) {
+        if (empty($this->client_token)) {
             $this->set_token();
+        }
+
+        if ($this->sandboxmode) {
+            $this->test_sandbox_mode();
         }
 
         $imported_items = $this->get_imported_items();
@@ -320,9 +336,14 @@ class wpu_display_instagram {
         if (empty($user_names)) {
             return 0;
         }
+        $base_userid = $this->get_user_id();
 
         $total_count = 0;
         foreach ($user_names as $user_name) {
+            // If sandbox, ignore if not base username
+            if ($this->sandboxmode && $base_userid != $user_name['user_id']) {
+                continue;
+            }
             $total_count += $this->import_for_user($user_name, $imported_items, $nb_items);
         }
 
@@ -337,6 +358,9 @@ class wpu_display_instagram {
         $request = wp_remote_get($request_url);
         if (is_wp_error($request)) {
             $this->messages->set_message('no_array_insta', __('The datas sent by Instagram are invalid.', 'wpudisplayinstagram'), 'error');
+            if (!$this->sandboxmode) {
+                $this->test_sandbox_mode();
+            }
             return 0;
         }
 
@@ -344,6 +368,9 @@ class wpu_display_instagram {
         $imginsta = json_decode(wp_remote_retrieve_body($request));
         if (!is_object($imginsta) || !property_exists($imginsta, 'data') || !is_array($imginsta->data)) {
             $this->messages->set_message('no_array_insta', __('The datas sent by Instagram are invalid.', 'wpudisplayinstagram'), 'error');
+            if (!$this->sandboxmode) {
+                $this->test_sandbox_mode();
+            }
             return 0;
         }
 
@@ -545,17 +572,18 @@ class wpu_display_instagram {
             if (isset($_POST[$this->options['id'] . 'import-datas'])) {
                 $this->admin_postAction_import();
             } else if (isset($_POST[$this->options['id'] . 'import-test'])) {
+                $this->test_sandbox_mode();
                 $returnTest = $this->admin_postAction_importTest();
-                $this->messages->set_message('importtest_success', ($returnTest ? __('The API works great.', 'wpudisplayinstagram') : __('The API do not work.', 'wpudisplayinstagram')), ($returnTest ? 'updated' : 'error'));
+                $this->messages->set_message('importtest_success', ($returnTest ? __('The API works great.', 'wpudisplayinstagram') : __('The API does not work.', 'wpudisplayinstagram')), ($returnTest ? 'updated' : 'error'));
             }
             wp_redirect($this->redirect_uri);
             exit();
         }
     }
 
-    private function admin_postAction_importTest() {
+    private function admin_postAction_importTest($id = false) {
         $_nb_items_test = 1;
-        $request_url = $this->get_request_url();
+        $request_url = $this->get_request_url($id);
         if (!$request_url) {
             return false;
         }
@@ -566,11 +594,19 @@ class wpu_display_instagram {
         }
 
         $_json = json_decode(wp_remote_retrieve_body($_request));
-        if (!is_object($_json) || count($_json->data) != $_nb_items_test) {
+        if (!is_object($_json) || !property_exists($_json, 'data') || count($_json->data) != $_nb_items_test) {
             return false;
         }
 
         return true;
+    }
+
+    private function test_sandbox_mode() {
+        $sandbox_mode = $this->sandboxmode;
+        $this->sandboxmode = $this->admin_postAction_importTest($this->test_user_id) ? 0 : 1;
+        if ($sandbox_mode != $this->sandboxmode) {
+            update_option('wpu_get_instagram__sandboxmode', $this->sandboxmode);
+        }
     }
 
     private function admin_postAction_import() {
@@ -578,7 +614,6 @@ class wpu_display_instagram {
         if ($count_import === false) {
             $this->messages->set_message('import_error', __('The import has failed.', 'wpudisplayinstagram'), 'updated');
         } else {
-
             $msg_import = sprintf(__('%s files have been imported.', 'wpudisplayinstagram'), $count_import);
             if ($count_import < 2) {
                 $msg_import = sprintf(__('%s file have been imported.', 'wpudisplayinstagram'), $count_import);
@@ -597,7 +632,11 @@ class wpu_display_instagram {
         $latestimport = get_option('wpudisplayinstagram_latestimport');
 
         echo '<div class="wrap">';
+        if ($this->sandboxmode && $this->config_ok) {
+            echo '<div class="error notice"><p>' . __('Sandbox mode is enabled for this app.', 'wpudisplayinstagram') . '</p></div>';
+        }
         echo '<h1>' . get_admin_page_title() . '</h1>';
+
         settings_errors($this->settings_details['option_id']);
 
         if (defined('WP_HTTP_BLOCK_EXTERNAL') && WP_HTTP_BLOCK_EXTERNAL) {
@@ -607,7 +646,7 @@ class wpu_display_instagram {
 
         if (empty($this->client_token)) {
             $_plugin_ok = false;
-            if (empty($this->client_id) || empty($this->client_secret) || empty($this->redirect_uri)) {
+            if (!$this->config_ok) {
                 echo '<p>' . sprintf(__('Please fill in Config details or create a <a target="_blank" href="%s">new Instagram app</a>', 'wpudisplayinstagram'), $this->register_link) . '</p>';
             } else {
                 echo '<p>' . sprintf(__('Please <a href="%s">login here</a>', 'wpudisplayinstagram'), $api_link) . '.</p>';
@@ -738,10 +777,12 @@ class wpu_display_instagram {
     ---------------------------------------------------------- */
 
     public function activation() {
+        delete_option('wpu_get_instagram__sandboxmode');
         flush_rewrite_rules();
     }
 
     public function deactivation() {
+        delete_option('wpu_get_instagram__sandboxmode');
         flush_rewrite_rules();
     }
 
@@ -757,6 +798,7 @@ class wpu_display_instagram {
             }
         }
         delete_option($this->option_user_ids_opt);
+        delete_option('wpu_get_instagram__sandboxmode');
         delete_option('wpu_get_instagram__client_secret');
         delete_option('wpu_get_instagram__client_token');
         delete_option('wpu_get_instagram__user_id');
@@ -779,7 +821,7 @@ class wpu_display_instagram {
 $wpu_display_instagram = new wpu_display_instagram();
 
 register_activation_hook(__FILE__, array(&$wpu_display_instagram,
-    'install'
+    'activation'
 ));
 register_deactivation_hook(__FILE__, array(&$wpu_display_instagram,
     'deactivation'
