@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Import Instagram
 Description: Import the latest instagram images
-Version: 0.18.1
+Version: 0.18.2
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -20,7 +20,7 @@ class wpu_display_instagram {
     public $register_link = 'https://instagram.com/developer/clients/register/';
     public $option_user_ids_opt = 'wpu_get_instagram__user_ids_opt';
 
-    public $plugin_version = '0.18.1';
+    public $plugin_version = '0.18.2';
 
     public function __construct() {
         $this->options = array(
@@ -639,7 +639,7 @@ class wpu_display_instagram {
 
         echo '<div class="wrap">';
         if ($this->sandboxmode && $this->config_ok) {
-            echo '<div class="error notice"><p>' . __('Sandbox mode is enabled for this app.', 'wpudisplayinstagram') . '</p></div>';
+            echo '<div class="error notice"><p>' . __('Sandbox mode is enabled for this app.', 'wpudisplayinstagram') . ' ' . __('Only the images posted by the signed-in user will be imported.', 'wpudisplayinstagram') . '</p></div>';
         }
         echo '<h1>' . get_admin_page_title() . '</h1>';
 
@@ -685,7 +685,7 @@ class wpu_display_instagram {
             if (!empty($wpq_instagram_posts)) {
                 echo '<br /><hr/><h3>' . __('Latest imports', 'wpudisplayinstagram') . '</h3><ul>';
                 foreach ($wpq_instagram_posts as $post_id) {
-                    echo '<li style="float:left">';
+                    echo '<li style="float:left;margin-right:5px;">';
                     echo '<a href="' . get_edit_post_link($post_id) . '">' . get_the_post_thumbnail($post_id, 'thumbnail') . '</a><br />';
                     echo $this->display_author($post_id);
                     echo '</li>';
