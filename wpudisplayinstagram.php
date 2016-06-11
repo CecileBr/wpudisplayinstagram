@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Import Instagram
 Description: Import the latest instagram images
-Version: 0.18
+Version: 0.18.1
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -20,7 +20,7 @@ class wpu_display_instagram {
     public $register_link = 'https://instagram.com/developer/clients/register/';
     public $option_user_ids_opt = 'wpu_get_instagram__user_ids_opt';
 
-    public $plugin_version = '0.17';
+    public $plugin_version = '0.18.1';
 
     public function __construct() {
         $this->options = array(
@@ -210,12 +210,11 @@ class wpu_display_instagram {
     public function get_request_url($user_id = false) {
 
         if (!$user_id || !is_numeric($user_id)) {
-            $token_parts = explode('.', $this->client_token);
-            if (is_numeric($token_parts[0])) {
-                $user_id = $token_parts[0];
-            } else {
-                return false;
-            }
+            $user_id = $this->get_user_id();
+        }
+
+        if (!is_numeric($user_id)) {
+            return false;
         }
 
         return 'https://api.instagram.com/v1/users/' . $user_id . '/media/recent/?count=%s&access_token=' . $this->client_token;
@@ -224,6 +223,13 @@ class wpu_display_instagram {
     public function get_user_id($user_name = '') {
         $_option_user_id = 'wpu_get_instagram__user_id__' . $user_name;
         $_user_id = false;
+
+        if (empty($user_name)) {
+            $token_parts = explode('.', $this->client_token);
+            if (is_numeric($token_parts[0])) {
+                return $token_parts[0];
+            }
+        }
 
         /* Set master user ids function */
         $opt_user_id = get_option($this->option_user_ids_opt);
