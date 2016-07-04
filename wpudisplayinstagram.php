@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Import Instagram
 Description: Import the latest instagram images
-Version: 0.18.2
+Version: 0.19
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -20,7 +20,7 @@ class wpu_display_instagram {
     public $register_link = 'https://instagram.com/developer/clients/register/';
     public $option_user_ids_opt = 'wpu_get_instagram__user_ids_opt';
 
-    public $plugin_version = '0.18.2';
+    public $plugin_version = '0.19';
 
     public function __construct() {
         $this->options = array(
@@ -848,22 +848,45 @@ class wpudisplayinstagram extends WP_Widget {
             'description' => 'Import Instagram'
         ));
     }
+
+    public function wpudisplayinstagram_getnbitems($instance) {
+        return isset($instance['nb_items']) && is_numeric($instance['nb_items']) ? $instance['nb_items'] : 5;
+    }
+
+    public function wpudisplayinstagram_defaultloopcontent($str, $wpq_instagram_posts) {
+        ob_start();
+        echo '<ul class="wpu-display-instagram__list">';
+        while ($wpq_instagram_posts->have_posts()) {
+            $wpq_instagram_posts->the_post();
+            echo '<li class="instagram-item">';
+            echo '<a class="instagram-link" target="_blank" href="' . get_post_meta(get_the_ID(), 'instagram_post_link', 1) . '">';
+            the_post_thumbnail();
+            echo '</a>';
+            echo '</li>';
+        }
+        echo '</ul>';
+        return ob_get_clean();
+    }
+
     public function form($instance) {
         load_plugin_textdomain('wpudisplayinstagram', false, dirname(plugin_basename(__FILE__)) . '/lang/');
-        $nb_items = is_numeric($instance['nb_items']) ? $instance['nb_items'] : 1;?>
+        $nb_items = $this->wpudisplayinstagram_getnbitems($instance);
+        ?>
         <p>
         <label for="<?php echo $this->get_field_id('nb_items'); ?>"><?php _e('Number of pictures displayed:', 'wpudisplayinstagram');?></label>
-        <input class="widefat" id="<?php echo $this->get_field_id('nb_items'); ?>" name="<?php echo $this->get_field_name('nb_items'); ?>" type="text" value="<?php echo esc_attr($nb_items); ?>">
+        <input class="widefat" id="<?php echo $this->get_field_id('nb_items'); ?>" name="<?php echo $this->get_field_name('nb_items'); ?>" type="number" value="<?php echo esc_attr($nb_items); ?>">
         </p>
         <?php
 }
+
     public function update($new_instance, $old_instance) {
         return array(
-            'nb_items' => is_numeric($new_instance['nb_items']) ? $new_instance['nb_items'] : 1
+            'nb_items' => $this->wpudisplayinstagram_getnbitems($new_instance)
         );
     }
+
     public function widget($widget_args = array(), $instance = array()) {
-        $nb_items = isset($instance['nb_items']) && is_numeric($instance['nb_items']) ? $instance['nb_items'] : 5;
+        $nb_items = $this->wpudisplayinstagram_getnbitems($instance);
         global $wpu_display_instagram;
         echo $widget_args['before_widget'];
         $wpq_instagram_posts = new WP_Query(array(
@@ -871,22 +894,15 @@ class wpudisplayinstagram extends WP_Widget {
             'post_type' => $wpu_display_instagram->options['post_type'],
             'orderby' => 'ID',
             'order' => 'DESC',
-            'post_status' => 'any'
+            'post_status' => 'any',
+            'cache_results' => true
         ));
+        add_filter('wpudisplayinstagram_loopcontent', array(&$this, 'wpudisplayinstagram_defaultloopcontent'), 1, 2);
+
         if ($wpq_instagram_posts->have_posts()) {
-            echo '<ul class="wpu-display-instagram__list">';
-            while ($wpq_instagram_posts->have_posts()) {
-                $wpq_instagram_posts->the_post();
-                echo '<li class="instagram-item">';
-                echo '<a class="instagram-link" target="_blank" href="' . get_post_meta(get_the_ID(), 'instagram_post_link', 1) . '">';
-                the_post_thumbnail();
-                echo '</a>';
-                echo '</li>';
-            }
-            echo '</ul>';
+            echo apply_filters('wpudisplayinstagram_loopcontent', '', $wpq_instagram_posts);
         }
         wp_reset_postdata();
-
         echo $widget_args['after_widget'];
     }
 }
