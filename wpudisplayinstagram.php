@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Import Instagram
 Description: Import the latest instagram images
-Version: 0.19
+Version: 0.20
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -20,13 +20,14 @@ class wpu_display_instagram {
     public $register_link = 'https://instagram.com/developer/clients/register/';
     public $option_user_ids_opt = 'wpu_get_instagram__user_ids_opt';
 
-    public $plugin_version = '0.19';
+    public $plugin_version = '0.20';
 
     public function __construct() {
         $this->options = array(
             'plugin_id' => 'wpudisplayinstagram',
             'id' => 'wpu-display-instagram',
             'name' => 'Import Instagram',
+            'taxonomy' => apply_filters('wpudisplayinstagram__taxonomy_id', 'instagram_tags'),
             'post_type' => apply_filters('wpudisplayinstagram__post_type_id', 'instagram_posts')
         );
 
@@ -37,7 +38,7 @@ class wpu_display_instagram {
             'init'
         ));
         add_action('init', array(&$this,
-            'register_post_types'
+            'register_taxo_type'
         ));
         add_action('admin_init', array(&$this,
             'set_token'
@@ -428,6 +429,21 @@ class wpu_display_instagram {
         // Create a new post
         $post_id = wp_insert_post($post_details);
 
+        // Add taxonomy
+        preg_match_all("/(#\w+)/", $datas['caption'], $matches);
+        if (!empty($matches)) {
+            $tags = array();
+            foreach ($matches[0] as $tag) {
+                $tag = str_replace('#', '', $tag);
+                if (!in_array($tag, $tags)) {
+                    $tags[] = $tag;
+                }
+            }
+            if (!empty($tags)) {
+                wp_set_post_terms($post_id, $tags, $this->options['taxonomy'], true);
+            }
+        }
+
         // Save datas
         update_post_meta($post_id, 'instagram_post_id', $datas['id']);
         update_post_meta($post_id, 'instagram_post_link', $datas['link']);
@@ -538,13 +554,14 @@ class wpu_display_instagram {
       Post type
     ---------------------------------------------------------- */
 
-    public function register_post_types() {
+    public function register_taxo_type() {
         register_post_type($this->options['post_type'], apply_filters('wpudisplayinstagram__post_type_infos', array(
             'public' => true,
             'label' => __('Instagram posts', 'wpudisplayinstagram'),
             'labels' => array(
                 'singular_name' => __('Instagram post', 'wpudisplayinstagram')
             ),
+            'taxonomies' => $this->options['taxonomy'],
             'menu_icon' => 'dashicons-format-image',
             'supports' => array(
                 'title',
@@ -552,6 +569,15 @@ class wpu_display_instagram {
                 'thumbnail'
             )
         )));
+        // create a new taxonomy
+        register_taxonomy(
+            $this->options['taxonomy'],
+            $this->options['post_type'],
+            apply_filters('wpudisplayinstagram__taxonomy_infos', array(
+                'label' => __('Instagram tags', 'wpudisplayinstagram'),
+                'hierarchical' => false
+            ))
+        );
     }
 
     /* ----------------------------------------------------------
