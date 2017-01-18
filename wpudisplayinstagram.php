@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Import Instagram
 Description: Import the latest instagram images
-Version: 0.20.1
+Version: 0.20.2
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -17,10 +17,10 @@ class wpu_display_instagram {
     public $options = array();
     public $messages = false;
     public $basecron = false;
-    public $register_link = 'https://instagram.com/developer/clients/register/';
+    public $register_link = 'https://instagram.com/developer/clients/';
     public $option_user_ids_opt = 'wpu_get_instagram__user_ids_opt';
 
-    public $plugin_version = '0.20.1';
+    public $plugin_version = '0.20.2';
 
     public function __construct() {
         $this->options = array(
@@ -33,9 +33,6 @@ class wpu_display_instagram {
 
         add_filter('plugins_loaded', array(&$this,
             'plugins_loaded'
-        ));
-        add_filter('init', array(&$this,
-            'init'
         ));
         add_action('init', array(&$this,
             'register_taxo_type'
@@ -133,6 +130,8 @@ class wpu_display_instagram {
     }
 
     public function plugins_loaded() {
+        $this->init_content();
+
         // Messages
         include_once 'inc/WPUBaseMessages.php';
         $this->messages = new \wpudisplayinstagram\WPUBaseMessages($this->options['plugin_id']);
@@ -150,14 +149,15 @@ class wpu_display_instagram {
         ));
         $this->basesettings = false;
         if (is_admin()) {
+
+            if ($this->sandboxmode) {
+                unset($this->settings['user_names']);
+            }
+
             include_once 'inc/WPUBaseSettings.php';
             $this->basesettings = new \wpudisplayinstagram\WPUBaseSettings($this->settings_details, $this->settings);
         }
 
-    }
-
-    public function init() {
-        $this->init_content();
     }
 
     public function init_content() {
@@ -191,6 +191,15 @@ class wpu_display_instagram {
 
     public function get_user_names() {
         $user_names = array();
+
+        if ($this->sandboxmode) {
+            $user_id = $this->get_user_id();
+            return array(array(
+                'user_id' => $user_id,
+                'request_url' => $this->get_request_url($user_id),
+            ));
+        }
+
         $_baseUserNames = str_replace(array(',', ';', ' '), "\n", $this->user_names);
         $_baseUserNames = explode("\n", $_baseUserNames);
         foreach ($_baseUserNames as $user_name) {
@@ -199,7 +208,6 @@ class wpu_display_instagram {
                 $user_id = $this->get_user_id($user_name);
                 $request_url = $this->get_request_url($user_id);
                 $user_names[] = array(
-                    'user_name' => $user_name,
                     'user_id' => $user_id,
                     'request_url' => $request_url
                 );
