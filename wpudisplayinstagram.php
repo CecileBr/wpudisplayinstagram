@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Import Instagram
 Description: Import the latest instagram images
-Version: 0.20.2
+Version: 0.20.3
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -20,7 +20,7 @@ class wpu_display_instagram {
     public $register_link = 'https://instagram.com/developer/clients/';
     public $option_user_ids_opt = 'wpu_get_instagram__user_ids_opt';
 
-    public $plugin_version = '0.20.2';
+    public $plugin_version = '0.20.3';
 
     public function __construct() {
         $this->options = array(
@@ -74,6 +74,14 @@ class wpu_display_instagram {
         add_action('add_meta_boxes', array(&$this,
             'add_meta_boxes'
         ));
+
+        // Gmaps
+        add_filter('wpugmapsautocompletebox_posttypes', array(&$this,
+            'set_wpugmapsautocompletebox_posttypes'
+        ), 10, 1);
+        add_filter('wpugmapsautocompletebox_dim', array(&$this,
+            'set_wpugmapsautocompletebox_dim'
+        ), 10, 1);
 
         load_plugin_textdomain('wpudisplayinstagram', false, dirname(plugin_basename(__FILE__)) . '/lang/');
 
@@ -196,7 +204,7 @@ class wpu_display_instagram {
             $user_id = $this->get_user_id();
             return array(array(
                 'user_id' => $user_id,
-                'request_url' => $this->get_request_url($user_id),
+                'request_url' => $this->get_request_url($user_id)
             ));
         }
 
@@ -810,6 +818,27 @@ class wpu_display_instagram {
         if (is_object($post)) {
             echo $this->display_author($post->ID);
         }
+    }
+
+    /* ----------------------------------------------------------
+      Edit with gmaps autocomplete
+    ---------------------------------------------------------- */
+
+    public function set_wpugmapsautocompletebox_posttypes($post_types) {
+        $post_types[] = 'instagram_posts';
+        return $post_types;
+    }
+
+    public function set_wpugmapsautocompletebox_dim($dim) {
+        if (!function_exists('get_current_screen')) {
+            return $dim;
+        }
+        $screen = get_current_screen();
+        if (is_object($screen) && $screen->base != 'post' && $screen->id != 'instagram_posts') {
+            $dim['lat']['id'] = 'instagram_post_latitude';
+            $dim['lng']['id'] = 'instagram_post_longitude';
+        }
+        return $dim;
     }
 
     /* ----------------------------------------------------------
