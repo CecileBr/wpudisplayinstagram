@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Import Instagram
 Description: Import the latest instagram images
-Version: 0.20.4
+Version: 0.21
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -20,7 +20,7 @@ class wpu_display_instagram {
     public $register_link = 'https://www.instagram.com/developer/clients/manage/';
     public $option_user_ids_opt = 'wpu_get_instagram__user_ids_opt';
 
-    public $plugin_version = '0.20.4';
+    public $plugin_version = '0.21';
 
     public function __construct() {
         $this->options = array(
@@ -51,6 +51,9 @@ class wpu_display_instagram {
         ));
         add_action('wpu_display_instagram__cron_hook', array(&$this,
             'cron_action'
+        ));
+        add_action('template_redirect', array(&$this,
+            'template_redirect'
         ));
 
         // Listing
@@ -99,6 +102,10 @@ class wpu_display_instagram {
             )
         );
 
+        add_action('update_option_wpudisplayinstagram_options', array(&$this,
+            'refresh'
+        ));
+
         $this->settings = array(
             'client_id' => array(
                 'section' => 'import',
@@ -122,6 +129,12 @@ class wpu_display_instagram {
                 'section' => 'user',
                 'label' => __('Import as draft', 'wpudisplayinstagram'),
                 'label_check' => __('Import image as a draft post', 'wpudisplayinstagram'),
+                'type' => 'checkbox'
+            ),
+            'display_posts_front' => array(
+                'section' => 'user',
+                'label' => __('Display posts', 'wpudisplayinstagram'),
+                'label_check' => __('Display posts in front', 'wpudisplayinstagram'),
                 'type' => 'checkbox'
             )
         );
@@ -149,15 +162,13 @@ class wpu_display_instagram {
 
         // Cron
         include_once 'inc/WPUBaseCron.php';
-        $this->basecron = new \wpudisplayinstagram\WPUBaseCron();
-        $this->basecron->init(array(
+        $this->basecron = new \wpudisplayinstagram\WPUBaseCron(array(
             'pluginname' => $this->options['name'],
             'cronhook' => 'wpu_display_instagram__cron_hook',
             'croninterval' => 3600
         ));
         $this->basesettings = false;
         if (is_admin()) {
-
             if ($this->sandboxmode) {
                 unset($this->settings['user_names']);
             }
@@ -178,6 +189,7 @@ class wpu_display_instagram {
         $this->user_name = isset($this->options_values['user_name']) ? trim($this->options_values['user_name']) : '';
         $this->user_names = isset($this->options_values['user_names']) ? trim($this->options_values['user_names']) : '';
         $this->import_as_draft = isset($this->options_values['import_as_draft']) ? trim($this->options_values['import_as_draft']) : false;
+        $this->display_posts_front = isset($this->options_values['display_posts_front']) ? trim($this->options_values['display_posts_front']) : false;
 
         $opt_sandboxmode = get_option('wpu_get_instagram__sandboxmode');
         $this->sandboxmode = ($opt_sandboxmode != '0') ? '1' : '0';
@@ -576,7 +588,9 @@ class wpu_display_instagram {
 
     public function register_taxo_type() {
         register_post_type($this->options['post_type'], apply_filters('wpudisplayinstagram__post_type_infos', array(
-            'public' => true,
+            'public' => $this->display_posts_front,
+            'show_in_nav_menus' => true,
+            'show_ui' => true,
             'label' => __('Instagram posts', 'wpudisplayinstagram'),
             'labels' => array(
                 'singular_name' => __('Instagram post', 'wpudisplayinstagram')
@@ -825,11 +839,26 @@ class wpu_display_instagram {
     }
 
     /* ----------------------------------------------------------
+      Front
+    ---------------------------------------------------------- */
+
+    public function template_redirect() {
+        if ($this->display_posts_front) {
+            return;
+        }
+
+        if (is_singular($this->options['post_type']) || is_post_type_archive($this->options['post_type'])) {
+            wp_redirect(home_url());
+            die;
+        }
+    }
+
+    /* ----------------------------------------------------------
       Edit with gmaps autocomplete
     ---------------------------------------------------------- */
 
     public function set_wpugmapsautocompletebox_posttypes($post_types) {
-        $post_types[] = 'instagram_posts';
+        $post_types[] = $this->options['post_type'];
         return $post_types;
     }
 
@@ -838,7 +867,7 @@ class wpu_display_instagram {
             return $dim;
         }
         $screen = get_current_screen();
-        if (is_object($screen) && $screen->base != 'post' && $screen->id != 'instagram_posts') {
+        if (is_object($screen) && $screen->base != 'post' && $screen->id != $this->options['post_type']) {
             $dim['lat']['id'] = 'instagram_post_latitude';
             $dim['lng']['id'] = 'instagram_post_longitude';
         }
@@ -849,14 +878,20 @@ class wpu_display_instagram {
       Activation / Deactivation
     ---------------------------------------------------------- */
 
+    public function refresh(){
+        flush_rewrite_rules();
+    }
+
     public function activation() {
         delete_option('wpu_get_instagram__sandboxmode');
         flush_rewrite_rules();
+        $this->basecron->install();
     }
 
     public function deactivation() {
         delete_option('wpu_get_instagram__sandboxmode');
         flush_rewrite_rules();
+        $this->basecron->uninstall();
     }
 
     public function uninstall() {
