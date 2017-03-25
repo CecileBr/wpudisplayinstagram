@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Import Instagram
 Description: Import the latest instagram images
-Version: 0.21
+Version: 0.21.1
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -20,7 +20,7 @@ class wpu_display_instagram {
     public $register_link = 'https://www.instagram.com/developer/clients/manage/';
     public $option_user_ids_opt = 'wpu_get_instagram__user_ids_opt';
 
-    public $plugin_version = '0.21';
+    public $plugin_version = '0.21.1';
 
     public function __construct() {
         $this->options = array(
@@ -883,12 +883,14 @@ class wpu_display_instagram {
     }
 
     public function activation() {
+        $this->plugins_loaded();
         delete_option('wpu_get_instagram__sandboxmode');
         flush_rewrite_rules();
         $this->basecron->install();
     }
 
     public function deactivation() {
+        $this->plugins_loaded();
         delete_option('wpu_get_instagram__sandboxmode');
         flush_rewrite_rules();
         $this->basecron->uninstall();
