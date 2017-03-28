@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Import Instagram
 Description: Import the latest instagram images
-Version: 0.21.1
+Version: 0.22
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -20,7 +20,7 @@ class wpu_display_instagram {
     public $register_link = 'https://www.instagram.com/developer/clients/manage/';
     public $option_user_ids_opt = 'wpu_get_instagram__user_ids_opt';
 
-    public $plugin_version = '0.21.1';
+    public $plugin_version = '0.22';
 
     public function __construct() {
         $this->options = array(
@@ -93,11 +93,14 @@ class wpu_display_instagram {
             'plugin_id' => 'wpudisplayinstagram',
             'option_id' => 'wpudisplayinstagram_options',
             'sections' => array(
-                'import' => array(
-                    'name' => __('Import settings', 'wpudisplayinstagram')
+                'access' => array(
+                    'name' => __('API Access', 'wpudisplayinstagram')
                 ),
-                'user' => array(
-                    'name' => __('User details', 'wpudisplayinstagram')
+                'settings' => array(
+                    'name' => __('Settings', 'wpudisplayinstagram')
+                ),
+                'generated' => array(
+                    'name' => __('Generated post', 'wpudisplayinstagram')
                 )
             )
         );
@@ -108,33 +111,45 @@ class wpu_display_instagram {
 
         $this->settings = array(
             'client_id' => array(
-                'section' => 'import',
+                'section' => 'access',
                 'label' => __('Client ID', 'wpudisplayinstagram')
             ),
             'client_secret' => array(
-                'section' => 'import',
+                'section' => 'access',
                 'label' => __('Client Secret', 'wpudisplayinstagram')
             ),
             'client_token' => array(
-                'section' => 'import',
+                'section' => 'access',
                 'label' => __('Access token', 'wpudisplayinstagram')
             ),
             'user_names' => array(
-                'section' => 'user',
+                'section' => 'settings',
                 'type' => 'textarea',
                 'label' => __('Usernames', 'wpudisplayinstagram'),
                 'help' => __('One user name by line', 'wpudisplayinstagram')
             ),
+            'display_posts_front' => array(
+                'section' => 'settings',
+                'label' => __('Display posts', 'wpudisplayinstagram'),
+                'label_check' => __('Display posts in front', 'wpudisplayinstagram'),
+                'type' => 'checkbox'
+            ),
             'import_as_draft' => array(
-                'section' => 'user',
+                'section' => 'generated',
                 'label' => __('Import as draft', 'wpudisplayinstagram'),
                 'label_check' => __('Import image as a draft post', 'wpudisplayinstagram'),
                 'type' => 'checkbox'
             ),
-            'display_posts_front' => array(
-                'section' => 'user',
-                'label' => __('Display posts', 'wpudisplayinstagram'),
-                'label_check' => __('Display posts in front', 'wpudisplayinstagram'),
+            'remove_tags_title' => array(
+                'section' => 'generated',
+                'label' => __('Remove tags', 'wpudisplayinstagram'),
+                'label_check' => __('Remove tags from the post title', 'wpudisplayinstagram'),
+                'type' => 'checkbox'
+            ),
+            'insert_image_content' => array(
+                'section' => 'generated',
+                'label' => __('Insert image', 'wpudisplayinstagram'),
+                'label_check' => __('Insert image in the post content', 'wpudisplayinstagram'),
                 'type' => 'checkbox'
             )
         );
@@ -190,6 +205,8 @@ class wpu_display_instagram {
         $this->user_names = isset($this->options_values['user_names']) ? trim($this->options_values['user_names']) : '';
         $this->import_as_draft = isset($this->options_values['import_as_draft']) ? trim($this->options_values['import_as_draft']) : false;
         $this->display_posts_front = isset($this->options_values['display_posts_front']) ? trim($this->options_values['display_posts_front']) : false;
+        $this->remove_tags_title = isset($this->options_values['remove_tags_title']) ? trim($this->options_values['remove_tags_title']) : false;
+        $this->insert_image_content = isset($this->options_values['insert_image_content']) ? trim($this->options_values['insert_image_content']) : false;
 
         $opt_sandboxmode = get_option('wpu_get_instagram__sandboxmode');
         $this->sandboxmode = ($opt_sandboxmode != '0') ? '1' : '0';
@@ -432,10 +449,15 @@ class wpu_display_instagram {
 
     public function import_item($datas = array()) {
 
+        // Set post title
+        $post_title = $datas['caption'];
+        if ($this->remove_tags_title) {
+            $post_title = preg_replace('/\#([A-Za-z0-9]*)/is', '', $post_title);
+            $post_title = preg_replace('/\s+/', ' ',$post_title);
+        }
+        $post_title = wp_trim_words($post_title, 20);
+
         // Set post details
-
-        $post_title = wp_trim_words($datas['caption'], 20);
-
         $post_details = array(
             'post_title' => $post_title,
             'post_content' => $datas['caption'],
@@ -507,6 +529,13 @@ class wpu_display_instagram {
         // set image as the post thumbnail
         if (sizeof($attachments) > 0) {
             set_post_thumbnail($post_id, $attachments[0]->ID);
+
+            if ($this->insert_image_content) {
+                wp_update_post(array(
+                    'ID' => $post_id,
+                    'post_content' => wpautop(get_the_post_thumbnail($post_id, 'full')) . $datas['caption']
+                ));
+            }
         }
 
         return $datas['id'];
@@ -771,6 +800,7 @@ class wpu_display_instagram {
     ---------------------------------------------------------- */
 
     public function posts_columns($columns = array()) {
+        $columns['instagram_post_tags'] = __('Tags', 'wpudisplayinstagram');
         $columns['instagram_post_username'] = __('Author', 'wpudisplayinstagram');
         return $columns;
     }
@@ -787,10 +817,31 @@ class wpu_display_instagram {
     }
 
     public function posts_column_content($column_name = '', $post_id = 1) {
-        if ('instagram_post_username' != $column_name) {
-            return;
+        if ('instagram_post_tags' == $column_name) {
+            /* Get the genres for the post. */
+            $terms = get_the_terms($post_id, $this->options['taxonomy']);
+
+            /* If terms were found. */
+            if (!empty($terms)) {
+
+                $out = array();
+
+                /* Loop through each term, linking to the 'edit posts' page for the specific term. */
+                foreach ($terms as $term) {
+                    $out[] = sprintf('<a href="%s">%s</a>',
+                        esc_url(add_query_arg(array('post_type' => $this->options['post_type'], $this->options['taxonomy'] => $term->slug), 'edit.php')),
+                        esc_html(sanitize_term_field('name', $term->name, $term->term_id, $this->options['taxonomy'], 'display'))
+                    );
+                }
+
+                /* Join the terms, separating them with a comma. */
+                echo join(', ', $out);
+            }
+
         }
-        echo $this->display_author($post_id);
+        if ('instagram_post_username' == $column_name) {
+            echo $this->display_author($post_id);
+        }
     }
 
     public function sortable_posts_column($columns = array()) {
@@ -878,7 +929,7 @@ class wpu_display_instagram {
       Activation / Deactivation
     ---------------------------------------------------------- */
 
-    public function refresh(){
+    public function refresh() {
         flush_rewrite_rules();
     }
 
