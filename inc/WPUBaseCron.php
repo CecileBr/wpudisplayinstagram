@@ -4,7 +4,7 @@ namespace wpudisplayinstagram;
 /*
 Class Name: WPU Base Cron
 Description: A class to handle crons
-Version: 0.2.2
+Version: 0.2.3
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -55,7 +55,14 @@ class WPUBaseCron {
         $croninterval = get_option($this->cronoption);
         $schedule = wp_next_scheduled($this->cronhook);
         // If no schedule cron or new interval or incorrect interval
-        if (!$schedule || $croninterval != $this->croninterval || $schedule - time() > $croninterval || $schedule - time() < 0) {
+        if (!$schedule || $croninterval != $this->croninterval) {
+            $this->install();
+            return;
+        }
+
+        // Schedule is too in the future
+        if ($schedule - time() - $croninterval > 0) {
+            do_action($this->cronhook);
             $this->install();
         }
     }
@@ -118,3 +125,18 @@ class WPUBaseCron {
         flush_rewrite_rules();
     }
 }
+
+
+/*
+ ## plugins_loaded ##
+ include 'inc/WPUBaseCron.php';
+ $WPUBaseCron = new WPUBaseCron(array(
+     'pluginname' => 'Base Plugin',
+     'cronhook' => 'wpubaseplugin__cron_hook',
+     'croninterval' => 900
+ ));
+
+ ## uninstall hook ##
+ $WPUBaseCron->uninstall();
+ *
+ */
