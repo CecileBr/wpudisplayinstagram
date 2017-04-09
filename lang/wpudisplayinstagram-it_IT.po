@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: WPU Import Instagram\n"
-"POT-Creation-Date: 2017-03-28 22:48+0200\n"
+"POT-Creation-Date: 2017-04-09 08:32+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Darklg <darklg.blog@gmail.com>\n"
 "Language-Team: \n"
@@ -20,7 +20,7 @@ msgid "Import Settings"
 msgstr "Importa Impostazioni"
 
 #: .././inc/WPUBaseSettings.php:96 .././inc/WPUBaseSettings.php:386
-#: .././wpudisplayinstagram.php:100 .././wpudisplayinstagram.php:660
+#: .././wpudisplayinstagram.php:101 .././wpudisplayinstagram.php:671
 msgid "Settings"
 msgstr "Impostazioni"
 
@@ -44,137 +44,137 @@ msgstr "Carica Nuovo"
 msgid "Save"
 msgstr "Salva"
 
-#: .././wpudisplayinstagram.php:97
+#: .././wpudisplayinstagram.php:98
 msgid "API Access"
 msgstr "Accesso API"
 
-#: .././wpudisplayinstagram.php:103
+#: .././wpudisplayinstagram.php:104
 msgid "Generated post"
 msgstr "Articolo generato"
 
-#: .././wpudisplayinstagram.php:115
+#: .././wpudisplayinstagram.php:116
 msgid "Client ID"
 msgstr "Client ID"
 
-#: .././wpudisplayinstagram.php:119
+#: .././wpudisplayinstagram.php:120
 msgid "Client Secret"
 msgstr "Client Secret"
 
-#: .././wpudisplayinstagram.php:123
+#: .././wpudisplayinstagram.php:124
 msgid "Access token"
 msgstr "Token d'accesso"
 
-#: .././wpudisplayinstagram.php:128
+#: .././wpudisplayinstagram.php:129
 msgid "Usernames"
 msgstr "Utente"
 
-#: .././wpudisplayinstagram.php:129
+#: .././wpudisplayinstagram.php:130
 msgid "One user name by line"
 msgstr "Nome di un utente di linea"
 
-#: .././wpudisplayinstagram.php:133
+#: .././wpudisplayinstagram.php:134
 msgid "Display posts"
 msgstr "Visualizzare i posts"
 
-#: .././wpudisplayinstagram.php:134
+#: .././wpudisplayinstagram.php:135
 msgid "Display posts in front"
 msgstr "Visualizzare tutti i posts di fronte"
 
-#: .././wpudisplayinstagram.php:139
+#: .././wpudisplayinstagram.php:140
 msgid "Import as draft"
 msgstr "Importare come bozza"
 
-#: .././wpudisplayinstagram.php:140
+#: .././wpudisplayinstagram.php:141
 msgid "Import image as a draft post"
 msgstr "Importare l'immagine come un progetto di post"
 
-#: .././wpudisplayinstagram.php:145
+#: .././wpudisplayinstagram.php:146
 msgid "Remove tags"
 msgstr "Rimuovere i tag"
 
-#: .././wpudisplayinstagram.php:146
+#: .././wpudisplayinstagram.php:147
 msgid "Remove tags from the post title"
 msgstr "Rimuovere i tag dal titolo del articolo"
 
-#: .././wpudisplayinstagram.php:151
+#: .././wpudisplayinstagram.php:152
 msgid "Insert image"
 msgstr "Inserisci immagine"
 
-#: .././wpudisplayinstagram.php:152
+#: .././wpudisplayinstagram.php:153
 msgid "Insert image in the post content"
 msgstr "Inserire immagine nel contenuto del articolo"
 
-#: .././wpudisplayinstagram.php:353
+#: .././wpudisplayinstagram.php:354
 msgid "The response from Instagram is invalid."
 msgstr "La risposta da Instagram non è valida."
 
-#: .././wpudisplayinstagram.php:359
+#: .././wpudisplayinstagram.php:360
 msgid "The access token from Instagram could not be retrieved."
 msgstr "Non è possibile recuperare il token di accesso da Instagram."
 
-#: .././wpudisplayinstagram.php:370
+#: .././wpudisplayinstagram.php:371
 msgid "The token have been successfully imported."
 msgstr "Il token sono stati importati correttamente."
 
-#: .././wpudisplayinstagram.php:416 .././wpudisplayinstagram.php:426
+#: .././wpudisplayinstagram.php:422 .././wpudisplayinstagram.php:434
 msgid "The datas sent by Instagram are invalid."
 msgstr "I dati inviati da Instagram non sono validi."
 
-#: .././wpudisplayinstagram.php:623
+#: .././wpudisplayinstagram.php:634
 msgid "Instagram posts"
 msgstr "Posts di Instagram"
 
-#: .././wpudisplayinstagram.php:625
+#: .././wpudisplayinstagram.php:636
 msgid "Instagram post"
 msgstr "Post di Instagram"
 
-#: .././wpudisplayinstagram.php:640
+#: .././wpudisplayinstagram.php:651
 msgid "Instagram tags"
 msgstr "Tag di Instagram"
 
-#: .././wpudisplayinstagram.php:651
+#: .././wpudisplayinstagram.php:662
 msgid "Import settings"
 msgstr "Importa impostazioni"
 
-#: .././wpudisplayinstagram.php:672
+#: .././wpudisplayinstagram.php:683
 msgid "The API works great."
 msgstr "L'API funziona alla grande."
 
-#: .././wpudisplayinstagram.php:672
+#: .././wpudisplayinstagram.php:683
 msgid "The API does not work."
 msgstr "L'API non funziona."
 
-#: .././wpudisplayinstagram.php:710
+#: .././wpudisplayinstagram.php:721
 msgid "The import has failed."
 msgstr "L'importazione non riuscita."
 
-#: .././wpudisplayinstagram.php:712
+#: .././wpudisplayinstagram.php:723
 #, php-format
 msgid "%s files have been imported."
 msgstr "%s file sono stati importati."
 
-#: .././wpudisplayinstagram.php:714
+#: .././wpudisplayinstagram.php:725
 #, php-format
 msgid "%s file have been imported."
 msgstr "%s file è stato importato."
 
-#: .././wpudisplayinstagram.php:717
+#: .././wpudisplayinstagram.php:728
 msgid "No file have been imported."
 msgstr "Nessun file sono stati importati."
 
-#: .././wpudisplayinstagram.php:731
+#: .././wpudisplayinstagram.php:742
 msgid "Sandbox mode is enabled for this app."
 msgstr "La modalità sandbox è attivata per questa applicazione."
 
-#: .././wpudisplayinstagram.php:731
+#: .././wpudisplayinstagram.php:742
 msgid "Only the images posted by the signed-in user will be imported."
 msgstr "Solo verranno importate le immagini pubblicate dall'utente firmato-in."
 
-#: .././wpudisplayinstagram.php:739
+#: .././wpudisplayinstagram.php:750
 msgid "The WordPress external requests are disabled."
 msgstr "Le richieste esterne di WordPress sono disabilitate."
 
-#: .././wpudisplayinstagram.php:745
+#: .././wpudisplayinstagram.php:756
 #, php-format
 msgid ""
 "Please fill in Config details or create a <a target=\"_blank\" href=\"%s"
@@ -183,45 +183,45 @@ msgstr ""
 "Compilate la pagina di configurazione dettagli o creare una <a target="
 "\"_blank\" href=\"%s\">nuova app Instagram</a>"
 
-#: .././wpudisplayinstagram.php:747
+#: .././wpudisplayinstagram.php:758
 #, php-format
 msgid "Please <a href=\"%s\">login here</a>"
 msgstr "Per favore <a href=\"%s\">login qui</a>"
 
-#: .././wpudisplayinstagram.php:749
+#: .././wpudisplayinstagram.php:760
 msgid "Request URI"
 msgstr "Request URI"
 
-#: .././wpudisplayinstagram.php:755
+#: .././wpudisplayinstagram.php:766
 #, php-format
 msgid "Next import: in %s"
 msgstr "Importazione Successiva : in %s"
 
-#: .././wpudisplayinstagram.php:761
+#: .././wpudisplayinstagram.php:772
 msgid "Import now"
 msgstr "Importa ora"
 
-#: .././wpudisplayinstagram.php:762
+#: .././wpudisplayinstagram.php:773
 msgid "Test import"
 msgstr "Controllare le importazione"
 
-#: .././wpudisplayinstagram.php:775
+#: .././wpudisplayinstagram.php:786
 msgid "Latest imports"
 msgstr "Importazioni recenti"
 
-#: .././wpudisplayinstagram.php:792
+#: .././wpudisplayinstagram.php:803
 msgid "Save Changes"
 msgstr "Salva modifiche"
 
-#: .././wpudisplayinstagram.php:803
+#: .././wpudisplayinstagram.php:814
 msgid "Tags"
 msgstr "Tags"
 
-#: .././wpudisplayinstagram.php:804 .././wpudisplayinstagram.php:883
+#: .././wpudisplayinstagram.php:815 .././wpudisplayinstagram.php:894
 msgid "Author"
 msgstr "Autori"
 
-#: .././wpudisplayinstagram.php:1031
+#: .././wpudisplayinstagram.php:1053
 msgid "Number of pictures displayed:"
 msgstr "Numero di immagini visualizzate:"
 

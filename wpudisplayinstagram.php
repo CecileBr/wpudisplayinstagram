@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Import Instagram
 Description: Import the latest instagram images
-Version: 0.22.2
+Version: 0.22.3
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -13,6 +13,7 @@ License URI: http://opensource.org/licenses/MIT
 class wpu_display_instagram {
 
     public $test_user_id = 25025320;
+    public $debug = false;
 
     public $options = array();
     public $messages = false;
@@ -20,7 +21,7 @@ class wpu_display_instagram {
     public $register_link = 'https://www.instagram.com/developer/clients/manage/';
     public $option_user_ids_opt = 'wpu_get_instagram__user_ids_opt';
 
-    public $plugin_version = '0.22.2';
+    public $plugin_version = '0.22.3';
 
     public function __construct() {
         $this->options = array(
@@ -381,6 +382,8 @@ class wpu_display_instagram {
             $this->test_sandbox_mode();
         }
 
+        $this->debug_log('import function called');
+
         $imported_items = $this->get_imported_items();
         $user_names = $this->get_user_names();
         $nb_items = 10;
@@ -390,6 +393,7 @@ class wpu_display_instagram {
         $nb_items = apply_filters('wpudisplayinstagram__nb_items', $nb_items);
 
         if (empty($user_names)) {
+            $this->debug_log('no usernames available');
             return 0;
         }
         $base_userid = $this->get_user_id();
@@ -410,10 +414,14 @@ class wpu_display_instagram {
     public function import_for_user($user_name = '', $imported_items = array(), $nb_items = 1) {
         $request_url = sprintf($user_name['request_url'], $nb_items);
 
+        $this->debug_log('import starting for user ' .  $user_name['user_id']);
+
         // Send request
         $request = wp_remote_get($request_url);
         if (is_wp_error($request)) {
-            $this->messages->set_message('no_array_insta', __('The datas sent by Instagram are invalid.', 'wpudisplayinstagram'), 'error');
+            $_message = __('The datas sent by Instagram are invalid.', 'wpudisplayinstagram');
+            $this->messages->set_message('no_array_insta', $_message, 'error');
+            $this->debug_log('user ' .  $user_name['user_id'] . ' : ' . $_message);
             if (!$this->sandboxmode) {
                 $this->test_sandbox_mode();
             }
@@ -423,7 +431,9 @@ class wpu_display_instagram {
         // Extract and return informations
         $imginsta = json_decode(wp_remote_retrieve_body($request));
         if (!is_object($imginsta) || !property_exists($imginsta, 'data') || !is_array($imginsta->data)) {
-            $this->messages->set_message('no_array_insta', __('The datas sent by Instagram are invalid.', 'wpudisplayinstagram'), 'error');
+            $_message = __('The datas sent by Instagram are invalid.', 'wpudisplayinstagram');
+            $this->messages->set_message('no_array_insta', $_message, 'error');
+            $this->debug_log('user ' .  $user_name['user_id'] . ' : ' . $_message);
             if (!$this->sandboxmode) {
                 $this->test_sandbox_mode();
             }
@@ -435,6 +445,7 @@ class wpu_display_instagram {
         foreach ($imginsta->data as $item) {
             $datas = $this->get_datas_from_item($item);
             if (!in_array($datas['id'], $imported_items)) {
+                $this->debug_log('user ' .  $user_name['user_id'] . ' : importing item ' . $datas['id']);
                 $count++;
                 $imported_items[] = $this->import_item($datas);
             }
@@ -453,7 +464,7 @@ class wpu_display_instagram {
         $post_title = $datas['caption'];
         if ($this->remove_tags_title) {
             $post_title = preg_replace('/\#([A-Za-z0-9]*)/is', '', $post_title);
-            $post_title = preg_replace('/\s+/', ' ',$post_title);
+            $post_title = preg_replace('/\s+/', ' ', $post_title);
         }
         $post_title = wp_trim_words($post_title, 20);
 
@@ -923,6 +934,17 @@ class wpu_display_instagram {
             $dim['lng']['id'] = 'instagram_post_longitude';
         }
         return $dim;
+    }
+
+    /* ----------------------------------------------------------
+      Debug
+    ---------------------------------------------------------- */
+
+    public function debug_log($message) {
+        if (!$this->debug) {
+            return;
+        }
+        error_log('[wpudisplayinstagram] ' . $message);
     }
 
     /* ----------------------------------------------------------
