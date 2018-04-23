@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Import Instagram
 Description: Import the latest instagram images
-Version: 0.22.4
+Version: 0.22.5
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -21,7 +21,7 @@ class wpu_display_instagram {
     public $register_link = 'https://www.instagram.com/developer/clients/manage/';
     public $option_user_ids_opt = 'wpu_get_instagram__user_ids_opt';
 
-    public $plugin_version = '0.22.4';
+    public $plugin_version = '0.22.5';
 
     public function __construct() {
         $this->debug = apply_filters('wpudisplayinstagram__debug', $this->debug);
@@ -415,14 +415,14 @@ class wpu_display_instagram {
     public function import_for_user($user_name = '', $imported_items = array(), $nb_items = 1) {
         $request_url = sprintf($user_name['request_url'], $nb_items);
 
-        $this->debug_log('import starting for user ' .  $user_name['user_id']);
+        $this->debug_log('import starting for user ' . $user_name['user_id']);
 
         // Send request
         $request = wp_remote_get($request_url);
         if (is_wp_error($request)) {
             $_message = __('The datas sent by Instagram are invalid.', 'wpudisplayinstagram');
             $this->messages->set_message('no_array_insta', $_message, 'error');
-            $this->debug_log('user ' .  $user_name['user_id'] . ' : ' . $_message);
+            $this->debug_log('user ' . $user_name['user_id'] . ' : ' . $_message);
             if (!$this->sandboxmode) {
                 $this->test_sandbox_mode();
             }
@@ -434,7 +434,7 @@ class wpu_display_instagram {
         if (!is_object($imginsta) || !property_exists($imginsta, 'data') || !is_array($imginsta->data)) {
             $_message = __('The datas sent by Instagram are invalid.', 'wpudisplayinstagram');
             $this->messages->set_message('no_array_insta', $_message, 'error');
-            $this->debug_log('user ' .  $user_name['user_id'] . ' : ' . $_message);
+            $this->debug_log('user ' . $user_name['user_id'] . ' : ' . $_message);
             if (!$this->sandboxmode) {
                 $this->test_sandbox_mode();
             }
@@ -446,7 +446,7 @@ class wpu_display_instagram {
         foreach ($imginsta->data as $item) {
             $datas = $this->get_datas_from_item($item);
             if (!in_array($datas['id'], $imported_items)) {
-                $this->debug_log('user ' .  $user_name['user_id'] . ' : importing item ' . $datas['id']);
+                $this->debug_log('user ' . $user_name['user_id'] . ' : importing item ' . $datas['id']);
                 $count++;
                 $imported_items[] = $this->import_item($datas);
             }
@@ -700,12 +700,26 @@ class wpu_display_instagram {
             return false;
         }
 
-        $_json = json_decode(wp_remote_retrieve_body($_request));
+        $_body = wp_remote_retrieve_body($_request);
+        $_json = json_decode($_body);
         if (!is_object($_json) || !property_exists($_json, 'data') || count($_json->data) != $_nb_items_test) {
+            $_error_json = $this->get_json_error_type($_json);
+            if ($_error_json == 'OAuthAccessTokenException') {
+                /* Reset invalid client token */
+                $this->messages->set_message('import_error', __('Invalid access token has been disabled.', 'wpudisplayinstagram'), 'error');
+                $this->basesettings->update_setting('client_token', "");
+            }
             return false;
         }
 
         return true;
+    }
+
+    private function get_json_error_type($json) {
+        if (!is_object($json) || !property_exists($json, 'meta') || !is_object($json->meta) || !property_exists($json->meta, 'error_type')) {
+            return '';
+        }
+        return $json->meta->error_type;
     }
 
     private function test_sandbox_mode() {
@@ -740,7 +754,7 @@ class wpu_display_instagram {
 
         echo '<div class="wrap">';
         if ($this->sandboxmode && $this->config_ok) {
-            echo '<div class="error notice"><p>' . __('Sandbox mode is enabled for this app.', 'wpudisplayinstagram') . ' ' . __('Only the images posted by the signed-in user will be imported.', 'wpudisplayinstagram') . '</p></div>';
+            echo '<div class="notice notice-warning"><p>' . __('Sandbox mode is enabled for this app.', 'wpudisplayinstagram') . ' ' . __('Only the images posted by the signed-in user will be imported.', 'wpudisplayinstagram') . '</p></div>';
         }
         echo '<h1>' . get_admin_page_title() . '</h1>';
 
