@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Import Instagram
 Description: Import the latest instagram images
-Version: 0.22.5
+Version: 0.22.6
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -21,7 +21,7 @@ class wpu_display_instagram {
     public $register_link = 'https://www.instagram.com/developer/clients/manage/';
     public $option_user_ids_opt = 'wpu_get_instagram__user_ids_opt';
 
-    public $plugin_version = '0.22.5';
+    public $plugin_version = '0.22.6';
 
     public function __construct() {
         $this->debug = apply_filters('wpudisplayinstagram__debug', $this->debug);
@@ -56,6 +56,9 @@ class wpu_display_instagram {
         ));
         add_action('template_redirect', array(&$this,
             'template_redirect'
+        ));
+        add_action('admin_notices', array(&$this,
+            'admin_notices'
         ));
 
         // Listing
@@ -334,7 +337,7 @@ class wpu_display_instagram {
 
     public function set_token() {
 
-        if (!is_admin() || !isset($_GET['page']) || $_GET['page'] != $this->options['id'] || !isset($_GET['code'])) {
+        if (!$this->is_admin_page() || !isset($_GET['code'])) {
             return;
         }
 
@@ -753,9 +756,6 @@ class wpu_display_instagram {
         $latestimport = get_option('wpudisplayinstagram_latestimport');
 
         echo '<div class="wrap">';
-        if ($this->sandboxmode && $this->config_ok) {
-            echo '<div class="notice notice-warning"><p>' . __('Sandbox mode is enabled for this app.', 'wpudisplayinstagram') . ' ' . __('Only the images posted by the signed-in user will be imported.', 'wpudisplayinstagram') . '</p></div>';
-        }
         echo '<h1>' . get_admin_page_title() . '</h1>';
 
         settings_errors($this->settings_details['option_id']);
@@ -928,6 +928,27 @@ class wpu_display_instagram {
             wp_redirect(home_url());
             die;
         }
+    }
+
+    /* ----------------------------------------------------------
+      Admin helper
+    ---------------------------------------------------------- */
+
+    public function admin_notices() {
+        if ($this->is_admin_page() && $this->sandboxmode && $this->config_ok) {
+            echo '<div class="notice notice-warning"><p>' . __('Sandbox mode is enabled for this app.', 'wpudisplayinstagram') . ' ' . __('Only the images posted by the signed-in user will be imported.', 'wpudisplayinstagram') . '</p></div>';
+        }
+        if (!$this->is_admin_page() && empty($this->client_token) && !empty($this->client_id) && !empty($this->client_secret)) {
+            echo '<div class="notice notice-warning"><p>' . sprintf(__('The access token for <strong>%s</strong> seems to be expired. Please <a href="%s">renew it here</a>.', 'wpudisplayinstagram'), $this->options['name'], $this->redirect_uri) . '</p></div>';
+        }
+    }
+
+    /* ----------------------------------------------------------
+      Admin
+    ---------------------------------------------------------- */
+
+    public function is_admin_page() {
+        return (is_admin() && isset($_GET['page']) && $_GET['page'] == $this->options['id']);
     }
 
     /* ----------------------------------------------------------
