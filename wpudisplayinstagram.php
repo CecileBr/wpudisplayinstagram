@@ -3,7 +3,7 @@
 /*
 Plugin Name: WPU Import Instagram
 Description: Import the latest instagram images
-Version: 0.22.6
+Version: 0.23.0
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -21,7 +21,7 @@ class wpu_display_instagram {
     public $register_link = 'https://www.instagram.com/developer/clients/manage/';
     public $option_user_ids_opt = 'wpu_get_instagram__user_ids_opt';
 
-    public $plugin_version = '0.22.6';
+    public $plugin_version = '0.23.0';
 
     public function __construct() {
         $this->debug = apply_filters('wpudisplayinstagram__debug', $this->debug);
@@ -139,6 +139,12 @@ class wpu_display_instagram {
                 'label_check' => __('Display posts in front', 'wpudisplayinstagram'),
                 'type' => 'checkbox'
             ),
+            'replace_oembed' => array(
+                'section' => 'settings',
+                'label' => __('Replace oembed', 'wpudisplayinstagram'),
+                'label_check' => __('Use local instagram images when available instead of JS embed.', 'wpudisplayinstagram'),
+                'type' => 'checkbox'
+            ),
             'import_as_draft' => array(
                 'section' => 'generated',
                 'label' => __('Import as draft', 'wpudisplayinstagram'),
@@ -209,6 +215,7 @@ class wpu_display_instagram {
         $this->user_name = isset($this->options_values['user_name']) ? trim($this->options_values['user_name']) : '';
         $this->user_names = isset($this->options_values['user_names']) ? trim($this->options_values['user_names']) : '';
         $this->import_as_draft = isset($this->options_values['import_as_draft']) ? trim($this->options_values['import_as_draft']) : false;
+        $this->replace_oembed = isset($this->options_values['replace_oembed']) ? trim($this->options_values['replace_oembed']) : false;
         $this->display_posts_front = isset($this->options_values['display_posts_front']) ? trim($this->options_values['display_posts_front']) : false;
         $this->remove_tags_title = isset($this->options_values['remove_tags_title']) ? trim($this->options_values['remove_tags_title']) : false;
         $this->insert_image_content = isset($this->options_values['insert_image_content']) ? trim($this->options_values['insert_image_content']) : false;
@@ -224,6 +231,12 @@ class wpu_display_instagram {
         $this->redirect_uri = admin_url($this->admin_uri . '&page=' . $this->options['id']);
 
         $this->config_ok = !empty($this->client_id) && !empty($this->client_secret);
+
+        if (apply_filters('wpudisplayinstagram_replace_oembed', $this->replace_oembed)) {
+            add_filter('embed_oembed_html', array(&$this,
+                'embed_oembed_html'
+            ), 99, 4);
+        }
 
     }
 
@@ -531,26 +544,16 @@ class wpu_display_instagram {
         require_once ABSPATH . 'wp-admin/includes/image.php';
 
         // Import image as an attachment
-        $image = media_sideload_image($datas['image'], $post_id, $datas['caption']);
-
-        // then find the last image added to the post attachments
-        $attachments = get_posts(array(
-            'numberposts' => 1,
-            'post_parent' => $post_id,
-            'post_type' => 'attachment',
-            'post_mime_type' => 'image'
-        ));
+        $image = media_sideload_image($datas['image'], $post_id, $datas['caption'], 'id');
 
         // set image as the post thumbnail
-        if (sizeof($attachments) > 0) {
-            set_post_thumbnail($post_id, $attachments[0]->ID);
+        set_post_thumbnail($post_id, $image);
 
-            if ($this->insert_image_content) {
-                wp_update_post(array(
-                    'ID' => $post_id,
-                    'post_content' => wpautop(get_the_post_thumbnail($post_id, 'full')) . $datas['caption']
-                ));
-            }
+        if ($this->insert_image_content) {
+            wp_update_post(array(
+                'ID' => $post_id,
+                'post_content' => wpautop(get_the_post_thumbnail($post_id, 'full')) . $datas['caption']
+            ));
         }
 
         return $datas['id'];
@@ -928,6 +931,29 @@ class wpu_display_instagram {
             wp_redirect(home_url());
             die;
         }
+    }
+
+    public function embed_oembed_html($html, $url, $attr, $post_id) {
+        if (is_admin()) {
+            return $html;
+        }
+
+        global $wpdb;
+        $query_search = "SELECT post_id FROM $wpdb->postmeta WHERE meta_key='instagram_post_link' AND meta_value='%s' LIMIT 0,1";
+        $instagram_post = $wpdb->get_var($wpdb->prepare($query_search, $url));
+
+        if (!is_numeric($instagram_post) || !has_post_thumbnail($instagram_post)) {
+            return $html;
+        }
+
+        $html = '<div class="wpuinstagram-embed">';
+        $html .= '<figure>';
+        $html .= get_the_post_thumbnail($instagram_post);
+        $html .= '<figcaption>' . get_post_field('post_content', $instagram_post) . '</figcaption>';
+        $html .= '</figure>';
+        $html .= '</div>';
+
+        return $html;
     }
 
     /* ----------------------------------------------------------

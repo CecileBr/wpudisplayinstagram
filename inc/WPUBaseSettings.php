@@ -4,7 +4,7 @@ namespace wpudisplayinstagram;
 /*
 Class Name: WPU Base Settings
 Description: A class to handle native settings in WordPress admin
-Version: 0.9.1
+Version: 0.12.2
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -15,6 +15,7 @@ class WPUBaseSettings {
 
     private $hook_page = false;
     private $has_media_setting = false;
+    private $admin_url = false;
 
     public function __construct($settings_details = array(), $settings = array()) {
         if (empty($settings_details) || empty($settings)) {
@@ -29,6 +30,7 @@ class WPUBaseSettings {
             }
         }
 
+        $opt = $this->get_settings();
         add_action('admin_init', array(&$this,
             'add_settings'
         ));
@@ -40,13 +42,21 @@ class WPUBaseSettings {
             add_action('admin_menu', array(&$this,
                 'admin_menu'
             ));
+            $this->admin_url = admin_url($this->settings_details['parent_page'] . '?page=' . $this->settings_details['plugin_id']);
+            if (isset($settings_details['plugin_basename'])) {
+                add_filter("plugin_action_links_" . $settings_details['plugin_basename'], array(&$this, 'plugin_add_settings_link'));
+            }
+        } else {
+            add_action('init', array(&$this, 'load_assets'));
         }
     }
 
     public function get_settings() {
         $opt = get_option($this->settings_details['option_id']);
         if (!is_array($opt)) {
-            $opt = array();
+            /* Set default values */
+            $opt = $this->get_setting_values();
+            update_option($this->settings_details['option_id'], $opt);
         }
         return $opt;
     }
@@ -99,7 +109,7 @@ class WPUBaseSettings {
         }
         foreach ($settings_details['sections'] as $id => $section) {
             if (!isset($section['user_cap'])) {
-                $settings_details['sections'][$id]['user_cap'] = 'manage_options';
+                $settings_details['sections'][$id]['user_cap'] = $settings_details['user_cap'];
             }
         }
         $this->settings_details = $settings_details;
@@ -124,7 +134,27 @@ class WPUBaseSettings {
             $settings[$id]['user_cap'] = $this->settings_details['sections'][$settings[$id]['section']]['user_cap'];
         }
 
-        $this->settings = $settings;
+        $languages = $this->get_languages();
+
+        /* Set multilingual fields */
+        $new_settings = array();
+        foreach ($settings as $id => $input) {
+            if (!isset($input['lang']) || empty($languages)) {
+                $new_settings[$id] = $input;
+                continue;
+            }
+            foreach ($languages as $lang) {
+                $input_lang = $input;
+                unset($input_lang['lang']);
+                $input_lang['translated_from'] = $id;
+                $input_lang['lang_id'] = $lang;
+                $input_lang['label'] = '[' . $lang . ']&nbsp;' . $input_lang['label'];
+                $new_settings[$lang . '__' . $id] = $input_lang;
+            }
+
+        }
+
+        $this->settings = $new_settings;
     }
 
     public function add_settings() {
@@ -182,7 +212,7 @@ class WPUBaseSettings {
             }
             switch ($setting['type']) {
             case 'checkbox':
-                $option_id = isset($input[$id]) ? '1' : '0';
+                $option_id = isset($input[$id]) && !in_array($input[$id], array('0', '')) ? '1' : '0';
                 break;
             case 'select':
                 if (!array_key_exists($input[$id], $setting['datas'])) {
@@ -294,6 +324,7 @@ class WPUBaseSettings {
         if (!$this->has_media_setting) {
             return;
         }
+
         add_action('admin_print_scripts', array(&$this, 'admin_scripts'));
         add_action('admin_print_styles', array(&$this, 'admin_styles'));
         add_action('admin_head', array(&$this, 'admin_head'));
@@ -389,8 +420,15 @@ EOT;
         add_action('load-' . $this->hook_page, array(&$this, 'load_assets'));
     }
 
+    public function plugin_add_settings_link($links) {
+        $settings_link = '<a href="' . $this->admin_url . '">' . __('Settings') . '</a>';
+        array_push($links, $settings_link);
+        return $links;
+    }
+
     public function admin_settings() {
         echo '<div class="wrap"><h1>' . get_admin_page_title() . '</h1>';
+        settings_errors();
         do_action('wpubasesettings_before_content_' . $this->hook_page);
         if (current_user_can($this->settings_details['user_cap'])) {
             echo '<hr />';
@@ -403,6 +441,65 @@ EOT;
         do_action('wpubasesettings_after_content_' . $this->hook_page);
         echo '</div>';
     }
+
+    /* Get settings */
+
+    public function get_setting_values($lang = false) {
+        if (!isset($this->settings) || !is_array($this->settings)) {
+            return array();
+        }
+        if (!$lang) {
+            $lang = $this->get_current_language();
+        }
+        $settings = get_option($this->settings_details['option_id']);
+        if (!is_array($settings)) {
+            $settings = array();
+        }
+        foreach ($this->settings as $key => $setting) {
+            /* Default fields */
+            if (!isset($settings[$key]) && !isset($setting['translated_from'])) {
+                $default_value = false;
+                if (isset($this->settings[$key], $this->settings[$key]['default'])) {
+                    $default_value = $this->settings[$key]['default'];
+                }
+                $settings[$key] = $default_value;
+            }
+            if (isset($setting['translated_from'], $setting['lang_id'], $settings[$key]) && $lang == $setting['lang_id'] && $settings[$key] !== false) {
+                $settings[$setting['translated_from']] = $settings[$key];
+            }
+        }
+        return $settings;
+    }
+
+    public function get_languages() {
+        // Obtaining from Qtranslate
+        if (function_exists('qtrans_getSortedLanguages')) {
+            return qtrans_getSortedLanguages();
+        }
+
+        // Obtaining from Qtranslate X
+        if (function_exists('qtranxf_getSortedLanguages')) {
+            return qtranxf_getSortedLanguages();
+        }
+
+        return array();
+
+    }
+
+    public function get_current_language() {
+        // Obtaining from Qtranslate
+        if (function_exists('qtrans_getLanguage')) {
+            return qtrans_getLanguage();
+        }
+
+        // Obtaining from Qtranslate X
+        if (function_exists('qtranxf_getLanguage')) {
+            return qtranxf_getLanguage();
+        }
+
+        return '';
+    }
+
 }
 
 /*
