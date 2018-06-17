@@ -4,7 +4,7 @@ namespace wpudisplayinstagram;
 /*
 Class Name: WPU Base Cron
 Description: A class to handle crons
-Version: 0.2.3
+Version: 0.2.5
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -33,12 +33,12 @@ class WPUBaseCron {
         add_filter('cron_schedules', array(&$this,
             'add_schedule'
         ));
-        add_action('init', array(&$this,
-            'check_cron'
-        ));
         add_action($this->cronhook, array(&$this,
             'store_execution_time'
         ), 99);
+
+        /* Check cron */
+        $this->check_cron();
     }
 
     /* Create schedule */
@@ -52,8 +52,9 @@ class WPUBaseCron {
 
     /* Schedule cron if possible */
     public function check_cron() {
-        $croninterval = get_option($this->cronoption);
+        $croninterval = intval(get_option($this->cronoption),10);
         $schedule = wp_next_scheduled($this->cronhook);
+
         // If no schedule cron or new interval or incorrect interval
         if (!$schedule || $croninterval != $this->croninterval) {
             $this->install();
@@ -62,6 +63,13 @@ class WPUBaseCron {
 
         // Schedule is too in the future
         if ($schedule - time() - $croninterval > 0) {
+            do_action($this->cronhook);
+            $this->install();
+            return;
+        }
+
+        // Schedule is too in the past
+        if ($schedule - time() < $croninterval * 12 * -1) {
             do_action($this->cronhook);
             $this->install();
         }
