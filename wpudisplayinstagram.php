@@ -3,7 +3,8 @@
 /*
 Plugin Name: WPU Import Instagram
 Description: Import the latest instagram images
-Version: 0.23.1
+Plugin URI: https://github.com/WordPressUtilities/wpudisplayinstagram
+Version: 0.23.2
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -12,16 +13,20 @@ License URI: http://opensource.org/licenses/MIT
 
 class wpu_display_instagram {
 
+    public $plugin_version = '0.23.2';
     public $test_user_id = 25025320;
     public $debug = false;
 
     public $options = array();
+
     public $messages = false;
     public $basecron = false;
-    public $register_link = 'https://www.instagram.com/developer/clients/manage/';
-    public $option_user_ids_opt = 'wpu_get_instagram__user_ids_opt';
 
-    public $plugin_version = '0.23.1';
+    public $register_link = 'https://www.instagram.com/developer/clients/manage/';
+    public $api_domain = 'https://api.instagram.com/';
+    public $api_version = 'v1';
+
+    public $option_user_ids_opt = 'wpu_get_instagram__user_ids_opt';
 
     public function __construct() {
         $this->debug = apply_filters('wpudisplayinstagram__debug', $this->debug);
@@ -285,7 +290,7 @@ class wpu_display_instagram {
             return false;
         }
 
-        return 'https://api.instagram.com/v1/users/' . $user_id . '/media/recent/?count=%s&access_token=' . $this->client_token;
+        return $this->api_domain . $this->api_version . '/users/' . $user_id . '/media/recent/?count=%s&access_token=' . $this->client_token;
     }
 
     public function get_user_id($user_name = '') {
@@ -326,7 +331,7 @@ class wpu_display_instagram {
         }
 
         /* Try to get user id from API */
-        $_url = "https://api.instagram.com/v1/users/search?q=" . $user_name . "&access_token=" . $this->client_token;
+        $_url = $this->api_domain . $this->api_version . "/users/search?q=" . $user_name . "&access_token=" . $this->client_token;
         $_request = wp_remote_get($_url);
         if (is_wp_error($_request)) {
             return false;
@@ -354,7 +359,7 @@ class wpu_display_instagram {
             return;
         }
 
-        $url = 'https://api.instagram.com/oauth/access_token';
+        $url = $this->api_domain . 'oauth/access_token';
         $result = wp_remote_post($url, array(
             'body' => array(
                 'client_id' => $this->client_id,
@@ -755,7 +760,7 @@ class wpu_display_instagram {
 
     public function admin_page() {
         $_plugin_ok = true;
-        $api_link = 'https://api.instagram.com/oauth/authorize/?client_id=' . $this->client_id . '&redirect_uri=' . urlencode($this->redirect_uri) . '&response_type=code';
+        $api_link = $this->api_domain . 'oauth/authorize/?client_id=' . $this->client_id . '&redirect_uri=' . urlencode($this->redirect_uri) . '&response_type=code';
         $latestimport = get_option('wpudisplayinstagram_latestimport');
 
         echo '<div class="wrap">';
@@ -946,10 +951,14 @@ class wpu_display_instagram {
             return $html;
         }
 
+        /* Remove embedded images */
+        $post_content = get_post_field('post_content', $instagram_post);
+        $post_content = preg_replace("/<img[^>]+\>/i", "", $post_content);
+
         $html = '<div class="wpuinstagram-embed">';
         $html .= '<figure>';
         $html .= get_the_post_thumbnail($instagram_post);
-        $html .= '<figcaption>' . get_post_field('post_content', $instagram_post) . '</figcaption>';
+        $html .= '<figcaption>' . $post_content . '</figcaption>';
         $html .= '</figure>';
         $html .= '</div>';
 
