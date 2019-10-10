@@ -4,7 +4,7 @@
 Plugin Name: WPU Import Instagram
 Description: Import the latest instagram images
 Plugin URI: https://github.com/WordPressUtilities/wpudisplayinstagram
-Version: 0.23.3
+Version: 0.23.4
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -13,7 +13,7 @@ License URI: http://opensource.org/licenses/MIT
 
 class wpu_display_instagram {
 
-    public $plugin_version = '0.23.3';
+    public $plugin_version = '0.23.4';
     public $test_user_id = 25025320;
     public $debug = false;
 
@@ -189,7 +189,6 @@ class wpu_display_instagram {
             'WordPressUtilities',
             'wpudisplayinstagram',
             $this->plugin_version);
-
 
         // Messages
         include_once 'inc/WPUBaseMessages.php';
@@ -700,6 +699,9 @@ class wpu_display_instagram {
                 $this->test_sandbox_mode();
                 $returnTest = $this->admin_postAction_importTest();
                 $this->messages->set_message('importtest_success', ($returnTest ? __('The API works great.', 'wpudisplayinstagram') : __('The API does not work.', 'wpudisplayinstagram')), ($returnTest ? 'updated' : 'error'));
+                if (empty($this->user_names)) {
+                    $this->messages->set_message('importtest_note_username', __('Please add at least one username.', 'wpudisplayinstagram'), 'error');
+                }
             }
             wp_redirect($this->redirect_uri);
             exit();
