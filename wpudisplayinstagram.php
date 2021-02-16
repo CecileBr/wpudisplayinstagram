@@ -739,12 +739,12 @@ class wpu_display_instagram {
     public function display_author($post_id = 1) {
         $fullname = get_post_meta($post_id, 'instagram_post_full_name', true);
         $username = get_post_meta($post_id, 'instagram_post_username', true);
-        if (empty($fullname) || empty($username)) {
+        if (empty($username)) {
             return '';
         }
         $external_url = 'https://instagram.com/' . $username;
         $url = admin_url('edit.php?post_type=' . $this->options['post_type'] . '&instagram_post_username=' . esc_attr($username));
-        return sprintf('<strong><a href="%s" target="_blank"><span style="text-decoration:none;font-size:1em;vertical-align:middle;" class="dashicons dashicons-format-image"></span></a> %s</strong><br />&rarr; <a href="%s">%s</a>', $external_url, $fullname, $url, $username);
+        return sprintf('<strong><a href="%s" target="_blank"><span style="text-decoration:none;font-size:1em;vertical-align:middle;" class="dashicons dashicons-format-image"></span></a> %s</strong><br />&rarr; <a href="%s">%s</a>', $external_url, $username, $url, $username);
     }
 
     public function posts_column_content($column_name = '', $post_id = 1) {
