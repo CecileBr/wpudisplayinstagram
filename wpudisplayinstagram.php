@@ -22,9 +22,9 @@ class wpu_display_instagram {
     public $messages = false;
     public $basecron = false;
 
-    public $register_link = 'https://www.instagram.com/developer/clients/manage/';
-    public $api_domain = 'https://api.instagram.com/';
-    public $api_version = 'v1';
+    public $register_link = 'https://developers.facebook.com/';
+    public $api_auth_domain = 'https://api.instagram.com/';
+    public $api_graph_domain = 'https://graph.instagram.com/';
 
     public $option_user_ids_opt = 'wpu_get_instagram__user_ids_opt';
 
@@ -122,7 +122,7 @@ class wpu_display_instagram {
         $this->settings = array(
             'client_id' => array(
                 'section' => 'access',
-                'label' => __('Client ID', 'wpudisplayinstagram')
+                'label' => __('APP ID', 'wpudisplayinstagram')
             ),
             'client_secret' => array(
                 'section' => 'access',
@@ -296,7 +296,7 @@ class wpu_display_instagram {
             return false;
         }
 
-        return $this->api_domain . $this->api_version . '/users/' . $user_id . '/media/recent/?count=%s&access_token=' . $this->client_token;
+        return $this->api_graph_domain . $user_id . '/media/?limit=%s&access_token=' . $this->client_token;
     }
 
     public function get_user_id($user_name = '') {
@@ -337,7 +337,7 @@ class wpu_display_instagram {
         }
 
         /* Try to get user id from API */
-        $_url = $this->api_domain . $this->api_version . "/users/search?q=" . $user_name . "&access_token=" . $this->client_token;
+        $_url = $this->api_auth_domain . "/users/search?q=" . $user_name . "&access_token=" . $this->client_token;
         $_request = wp_remote_get($_url);
         if (is_wp_error($_request)) {
             return false;
@@ -360,18 +360,17 @@ class wpu_display_instagram {
     }
 
     public function set_token() {
-
         if (!$this->is_admin_page() || !isset($_GET['code'])) {
             return;
         }
 
-        $url = $this->api_domain . 'oauth/access_token';
+        $url = $this->api_auth_domain . 'oauth/access_token';
         $result = wp_remote_post($url, array(
             'body' => array(
                 'client_id' => $this->client_id,
                 'client_secret' => $this->client_secret,
                 'grant_type' => 'authorization_code',
-                'redirect_uri' => $this->redirect_uri,
+                'redirect_uri' => admin_url('edit.php'),
                 'code' => $_GET['code']
             )
         ));
@@ -774,7 +773,7 @@ class wpu_display_instagram {
 
     public function admin_page() {
         $_plugin_ok = true;
-        $api_link = $this->api_domain . 'oauth/authorize/?client_id=' . $this->client_id . '&redirect_uri=' . urlencode($this->redirect_uri) . '&response_type=code';
+        $api_link = $this->api_auth_domain . 'oauth/authorize/?client_id=' . $this->client_id . '&redirect_uri=' . urlencode($this->redirect_uri) . '&scope=user_profile,user_media&response_type=code&state=' . $this->options['id'];
         $latestimport = get_option('wpudisplayinstagram_latestimport');
 
         echo '<div class="wrap">';
@@ -997,7 +996,7 @@ class wpu_display_instagram {
     ---------------------------------------------------------- */
 
     public function is_admin_page() {
-        return (is_admin() && isset($_GET['page']) && $_GET['page'] == $this->options['id']);
+        return (is_admin() && ((isset($_GET['page']) && $_GET['page'] == $this->options['id']) || (isset($_GET['state']) && $_GET['state'] == $this->options['id'])));
     }
 
     /* ----------------------------------------------------------
