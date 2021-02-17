@@ -136,6 +136,10 @@ class wpu_display_instagram {
                 'section' => 'access',
                 'label' => __('User ID', 'wpudisplayinstagram')
             ),
+            'expires_in' => array(
+                'section' => 'access',
+                'label' => __('Token expiration', 'wpudisplayinstagram')
+            ),
             'display_posts_front' => array(
                 'section' => 'settings',
                 'label' => __('Display posts', 'wpudisplayinstagram'),
@@ -218,6 +222,7 @@ class wpu_display_instagram {
         $this->client_id = isset($this->options_values['client_id']) ? trim($this->options_values['client_id']) : '';
         $this->client_secret = isset($this->options_values['client_secret']) ? trim($this->options_values['client_secret']) : '';
         $this->user_id = isset($this->options_values['user_id']) ? trim($this->options_values['user_id']) : '';
+        $this->expires_in = isset($this->options_values['expires_in']) ? trim($this->options_values['expires_in']) : '';
         $this->import_as_draft = isset($this->options_values['import_as_draft']) ? trim($this->options_values['import_as_draft']) : false;
         $this->replace_oembed = isset($this->options_values['replace_oembed']) ? trim($this->options_values['replace_oembed']) : false;
         $this->display_posts_front = isset($this->options_values['display_posts_front']) ? trim($this->options_values['display_posts_front']) : false;
@@ -293,18 +298,43 @@ class wpu_display_instagram {
             return;
         }
 
-        $this->client_token = $response->access_token;
-        $this->user_id = $response->user_id;
+        $long_lived_token = $this->get_long_lived_token($response->access_token);
 
-        $this->test_sandbox_mode();
+        if ($long_lived_token) {
+            $this->client_token = $long_lived_token->access_token;
+            $this->expires_in = $long_lived_token->expires_in;
+            $this->user_id = $response->user_id;
 
-        // Update options
-        $this->basesettings->update_setting('client_token', $this->client_token);
-        $this->basesettings->update_setting('user_id', $this->user_id);
+            $this->test_sandbox_mode();
 
-        $this->messages->set_message('token_success', __('The token have been successfully imported.', 'wpudisplayinstagram'), 'updated');
-        wp_redirect($this->redirect_uri);
-        exit();
+            // Update options
+            $this->basesettings->update_setting('client_token', $this->client_token);
+            $this->basesettings->update_setting('expires_in', $this->expires_in);
+            $this->basesettings->update_setting('user_id', $this->user_id);
+
+            $this->messages->set_message('token_success', __('The token have been successfully imported.', 'wpudisplayinstagram'), 'updated');
+            wp_redirect($this->redirect_uri);
+            exit();
+        }
+    }
+
+    public function get_long_lived_token($short_lived_access_token){
+        $url = $this->api_graph_domain . 'access_token?grant_type=ig_exchange_token&client_secret=' . $this->client_secret . '&access_token=' . $short_lived_access_token;
+        $result = wp_remote_get($url);
+        $token = '';
+        $response = '{}';
+        if (is_wp_error($result)) {
+            $this->messages->set_message('token_no_body', __('The response from Instagram is invalid.', 'wpudisplayinstagram'), 'error');
+            return false;
+        }
+
+        $response = json_decode(wp_remote_retrieve_body($result));
+        if (!isset($response->access_token)) {
+            $this->messages->set_message('token_no_token', __('The access token from Instagram could not be retrieved.', 'wpudisplayinstagram'), 'error');
+            return false;
+        } else {
+            return $response;
+        }
     }
 
     public function import() {
@@ -922,14 +952,15 @@ class wpu_display_instagram {
         delete_option('wpu_get_instagram__sandboxmode');
         delete_option('wpu_get_instagram__client_secret');
         delete_option('wpu_get_instagram__client_token');
+        delete_option('wpu_get_instagram__expires_in');
         delete_option('wpu_get_instagram__user_id');
         delete_option('wpudisplayinstagram_latestimport');
         delete_option($this->settings_details['option_id']);
 
         // Delete fields
         delete_post_meta_by_key('instagram_post_username');
-        delete_post_meta_by_key('instagram_post_full_name');
         delete_post_meta_by_key('instagram_post_id');
+        delete_post_meta_by_key('instagram_post_permalink');
         delete_post_meta_by_key('instagram_post_link');
         delete_post_meta_by_key('instagram_post_datas');
         delete_post_meta_by_key('instagram_post_latitude');
