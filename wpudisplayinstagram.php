@@ -181,6 +181,7 @@ class wpu_display_instagram {
     public function cron_action() {
         $this->init_content();
         $this->import();
+        $this->is_long_lived_token_expired();
     }
 
     public function plugins_loaded() {
@@ -313,7 +314,8 @@ class wpu_display_instagram {
     }
 
     public function set_long_lived_token($grant_type, $access_token){
-        $url = $this->api_graph_domain . 'access_token?grant_type=' . $grant_type . '&client_secret=' . $this->client_secret . '&access_token=' . $access_token;
+        $path = $grant_type === 'ig_exchange_token' ? 'access_token' : 'refresh_access_token';
+        $url = $this->api_graph_domain . $path .'?grant_type=' . $grant_type . '&client_secret=' . $this->client_secret . '&access_token=' . $access_token;
         $result = wp_remote_get($url);
         $token = '';
         $response = '{}';
@@ -338,18 +340,32 @@ class wpu_display_instagram {
         }
     }
 
-    // public function is_long_lived_token_expired(){
-    //     $current_time = time();
+    public function is_long_lived_token_expired(){
+        if (empty($this->expires_in)) {
+            return;
+        }
 
-    //     if ($this->expires_in < $current_time) {
-    //         $this->basesettings->update_setting('client_token', "");
-    //         $this->basesettings->update_setting('expires_in', "");
+        $expires_in = (int) $this->expires_in;
+        $current_time = time();
 
-    //         wp_redirect($this->redirect_uri);
-    //         exit();
-    //     }
-    //     return $expires_in < $current_time;
-    // }
+        if ($expires_in < $current_time) {
+            $this->basesettings->update_setting('client_token', "");
+            $this->basesettings->update_setting('expires_in', "");
+
+            wp_redirect($this->redirect_uri);
+            exit();
+        } else if (($expires_in - $current_time) < 86400) {
+            $long_lived_token = $this->set_long_lived_token('ig_refresh_token', $this->client_token);
+
+            if (!$long_lived_token) {
+                $this->basesettings->update_setting('client_token', "");
+                $this->basesettings->update_setting('expires_in', "");
+
+                wp_redirect($this->redirect_uri);
+                exit();
+            }
+        }
+    }
 
     public function import() {
         if (empty($this->client_token)) {
