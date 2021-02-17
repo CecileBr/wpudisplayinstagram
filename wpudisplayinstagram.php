@@ -261,7 +261,7 @@ class wpu_display_instagram {
             return false;
         }
 
-        return $this->api_graph_domain . $user_id . '/media/?limit=%s&access_token=' . $this->client_token;
+        return $this->api_graph_domain . $user_id . '/media/?limit=%s&fields=id,caption,media_url,permalink,timestamp,username&access_token=' . $this->client_token;
     }
 
     public function set_token() {
@@ -334,7 +334,6 @@ class wpu_display_instagram {
 
         // Send request
         $request = wp_remote_get($request_url);
-        var_dump($request);
         if (is_wp_error($request)) {
             $_message = __('The datas sent by Instagram are invalid.', 'wpudisplayinstagram');
             $this->messages->set_message('no_array_insta', $_message, 'error');
@@ -391,7 +390,7 @@ class wpu_display_instagram {
             'post_content' => $datas['caption'],
             'post_name' => preg_replace('/([^a-z0-9-$]*)/isU', '', sanitize_title($post_title)),
             'post_status' => 'publish',
-            'post_date' => date('Y-m-d H:i:s', $datas['created_time']),
+            'post_date' => iso8601_to_datetime($datas['timestamp']),
             'post_author' => 1,
             'post_type' => $this->options['post_type']
         );
@@ -428,15 +427,9 @@ class wpu_display_instagram {
 
         // Save datas
         update_post_meta($post_id, 'instagram_post_id', $datas['id']);
-        update_post_meta($post_id, 'instagram_post_link', $datas['link']);
+        update_post_meta($post_id, 'instagram_post_link', $datas['permalink']);
         update_post_meta($post_id, 'instagram_post_username', $datas['username']);
-        update_post_meta($post_id, 'instagram_post_full_name', $datas['full_name']);
         update_post_meta($post_id, 'instagram_post_datas', $datas);
-
-        if ($datas['location']['latitude'] != 0) {
-            update_post_meta($post_id, 'instagram_post_latitude', $datas['location']['latitude']);
-            update_post_meta($post_id, 'instagram_post_longitude', $datas['location']['longitude']);
-        }
 
         // Add required classes
         require_once ABSPATH . 'wp-admin/includes/media.php';
@@ -469,14 +462,9 @@ class wpu_display_instagram {
         $datas = array(
             'image' => '',
             'username' => '',
-            'full_name' => '',
             'link' => '#',
             'created_time' => '0',
             'caption' => '',
-            'location' => array(
-                'latitude' => 0,
-                'longitude' => 0
-            ),
             'id' => 0
         );
 
@@ -486,44 +474,28 @@ class wpu_display_instagram {
         }
 
         // Image
-        if (isset($details->images->standard_resolution->url)) {
-            $datas['image'] = $details->images->standard_resolution->url;
+        if (isset($details->media_url)) {
+            $datas['image'] = $details->media_url;
         }
 
         // Link
-        if (isset($details->link)) {
-            $datas['link'] = $details->link;
+        if (isset($details->permalink)) {
+            $datas['link'] = $details->permalink;
         }
 
         // Name
-        if (isset($details->user, $details->user->username, $details->user->full_name)) {
-            $datas['username'] = $details->user->username;
-            $datas['full_name'] = $details->user->full_name;
+        if (isset($details->username)) {
+            $datas['username'] = $details->username;
         }
 
         // Created time
-        if (isset($details->created_time)) {
-            $datas['created_time'] = $details->created_time;
+        if (isset($details->timestamp)) {
+            $datas['timestamp'] = $details->timestamp;
         }
 
         // Caption
-        if (isset($details->caption->text)) {
-            $datas['caption'] = $details->caption->text;
-        }
-
-        if (isset($details->location->name)) {
-            if (!empty($datas['caption'])) {
-                $datas['caption'] .= ' - ';
-            }
-            $datas['caption'] .= $details->location->name;
-        }
-
-        // Location
-        if (isset($details->location->latitude, $details->location->longitude)) {
-            $datas['location'] = array(
-                'latitude' => $details->location->latitude,
-                'longitude' => $details->location->longitude
-            );
+        if (isset($details->caption)) {
+            $datas['caption'] = $details->caption;
         }
 
         return $datas;
@@ -639,7 +611,6 @@ class wpu_display_instagram {
 
     private function admin_postAction_import() {
         $count_import = $this->import();
-        var_dump($count_import);
         if ($count_import === false) {
             $this->messages->set_message('import_error', __('The import has failed.', 'wpudisplayinstagram'), 'updated');
         } else {
@@ -737,7 +708,6 @@ class wpu_display_instagram {
     }
 
     public function display_author($post_id = 1) {
-        $fullname = get_post_meta($post_id, 'instagram_post_full_name', true);
         $username = get_post_meta($post_id, 'instagram_post_username', true);
         if (empty($username)) {
             return '';
