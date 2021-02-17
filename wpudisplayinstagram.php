@@ -298,19 +298,13 @@ class wpu_display_instagram {
             return;
         }
 
-        $long_lived_token = $this->get_long_lived_token($response->access_token);
+        $long_lived_token = $this->set_long_lived_token('ig_exchange_token', $response->access_token);
 
         if ($long_lived_token) {
-            $this->client_token = $long_lived_token->access_token;
-            $this->expires_in = $long_lived_token->expires_in;
             $this->user_id = $response->user_id;
+            $this->basesettings->update_setting('user_id', $this->user_id);
 
             $this->test_sandbox_mode();
-
-            // Update options
-            $this->basesettings->update_setting('client_token', $this->client_token);
-            $this->basesettings->update_setting('expires_in', $this->expires_in);
-            $this->basesettings->update_setting('user_id', $this->user_id);
 
             $this->messages->set_message('token_success', __('The token have been successfully imported.', 'wpudisplayinstagram'), 'updated');
             wp_redirect($this->redirect_uri);
@@ -318,8 +312,8 @@ class wpu_display_instagram {
         }
     }
 
-    public function get_long_lived_token($short_lived_access_token){
-        $url = $this->api_graph_domain . 'access_token?grant_type=ig_exchange_token&client_secret=' . $this->client_secret . '&access_token=' . $short_lived_access_token;
+    public function set_long_lived_token($grant_type, $access_token){
+        $url = $this->api_graph_domain . 'access_token?grant_type=' . $grant_type . '&client_secret=' . $this->client_secret . '&access_token=' . $access_token;
         $result = wp_remote_get($url);
         $token = '';
         $response = '{}';
@@ -333,9 +327,29 @@ class wpu_display_instagram {
             $this->messages->set_message('token_no_token', __('The access token from Instagram could not be retrieved.', 'wpudisplayinstagram'), 'error');
             return false;
         } else {
-            return $response;
+            $this->client_token = $response->access_token;
+            $this->expires_in = strtotime('+60 days', time());
+
+            // Update options
+            $this->basesettings->update_setting('client_token', $this->client_token);
+            $this->basesettings->update_setting('expires_in', $this->expires_in);
+
+            return true;
         }
     }
+
+    // public function is_long_lived_token_expired(){
+    //     $current_time = time();
+
+    //     if ($this->expires_in < $current_time) {
+    //         $this->basesettings->update_setting('client_token', "");
+    //         $this->basesettings->update_setting('expires_in', "");
+
+    //         wp_redirect($this->redirect_uri);
+    //         exit();
+    //     }
+    //     return $expires_in < $current_time;
+    // }
 
     public function import() {
         if (empty($this->client_token)) {
@@ -960,7 +974,6 @@ class wpu_display_instagram {
         // Delete fields
         delete_post_meta_by_key('instagram_post_username');
         delete_post_meta_by_key('instagram_post_id');
-        delete_post_meta_by_key('instagram_post_permalink');
         delete_post_meta_by_key('instagram_post_link');
         delete_post_meta_by_key('instagram_post_datas');
         delete_post_meta_by_key('instagram_post_latitude');
