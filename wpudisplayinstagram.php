@@ -487,7 +487,7 @@ class wpu_display_instagram {
 
         // Save datas
         update_post_meta($post_id, 'instagram_post_id', $datas['id']);
-        update_post_meta($post_id, 'instagram_post_link', $datas['permalink']);
+        update_post_meta($post_id, 'instagram_post_link', $datas['link']);
         update_post_meta($post_id, 'instagram_post_username', $datas['username']);
         update_post_meta($post_id, 'instagram_post_datas', $datas);
 
